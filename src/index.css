@@ -2,31 +2,233 @@
 @tailwind components;
 @tailwind utilities;
 
-html, body, #root {
-  margin: 0;
-  padding: 0;
-  background-color: #0A1628;
-  min-height: 100vh;
-  min-height: 100dvh;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-  text-size-adjust: 100%;
-  -webkit-text-size-adjust: 100%;
+/* ============================================================
+   Kaira design tokens
+   Semantic colors as space-separated RGB channels so Tailwind's
+   alpha modifiers (bg-surface/70) work everywhere.
+   ============================================================ */
+:root,
+:root[data-theme='light'] {
+  --bg: 250 249 246; /* warm paper */
+  --surface: 255 255 255;
+  --elevated: 255 255 255;
+  --line: 22 22 26; /* used with low alpha for hairlines */
+  --line-alpha: 0.08;
+  --ink: 14 15 18;
+  --muted: 82 86 94;
+  --faint: 138 143 152;
+  --accent: 15 108 84; /* Nordic forest green */
+  --accent-soft: 224 240 234;
+  --accent-ink: 255 255 255;
+  --gold: 176 141 74;
+  --success: 21 128 61;
+  --danger: 190 45 45;
+  --warning: 176 122 20;
+
+  --glass-bg: 255 255 255;
+  --glass-alpha: 0.66;
+  --shadow-color: 20 24 30;
 }
 
-/* Prevent ugly iOS tap flash */
-* { -webkit-tap-highlight-color: transparent; }
+:root[data-theme='dark'] {
+  --bg: 11 12 14;
+  --surface: 22 24 28;
+  --elevated: 30 33 38;
+  --line: 255 255 255;
+  --line-alpha: 0.09;
+  --ink: 244 245 247;
+  --muted: 168 173 182;
+  --faint: 120 126 136;
+  --accent: 45 199 154; /* brighter mint for dark */
+  --accent-soft: 24 46 40;
+  --accent-ink: 6 20 16;
+  --gold: 206 170 100;
+  --success: 74 201 126;
+  --danger: 240 118 118;
+  --warning: 226 176 84;
 
-/* Number inputs: hide spinners (cleaner mobile UX) */
-input[type=number]::-webkit-inner-spin-button,
-input[type=number]::-webkit-outer-spin-button {
+  --glass-bg: 24 27 32;
+  --glass-alpha: 0.62;
+  --shadow-color: 0 0 0;
+}
+
+* {
+  border-color: rgb(var(--line) / var(--line-alpha));
+}
+
+html,
+body,
+#root {
+  margin: 0;
+  padding: 0;
+  min-height: 100vh;
+  min-height: 100dvh;
+}
+
+body {
+  background-color: rgb(var(--bg));
+  color: rgb(var(--ink));
+  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', Roboto, Inter, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+  text-size-adjust: 100%;
+  -webkit-text-size-adjust: 100%;
+  letter-spacing: -0.01em;
+  transition: background-color 0.4s ease, color 0.4s ease;
+}
+
+* {
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Cleaner inputs */
+input,
+textarea,
+select,
+button {
+  font-family: inherit;
+  letter-spacing: inherit;
+}
+input[type='number']::-webkit-inner-spin-button,
+input[type='number']::-webkit-outer-spin-button {
   -webkit-appearance: none;
   margin: 0;
 }
-input[type=number] { -moz-appearance: textfield; }
+input[type='number'] {
+  -moz-appearance: textfield;
+}
 
-/* Safe-area for iPhone notch / home indicator */
-body {
+/* Hairline border helper (respects theme alpha) */
+.border-hairline {
+  border-color: rgb(var(--line) / var(--line-alpha));
+}
+
+/* ---- Scrollbars ---- */
+.no-scrollbar {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.thin-scrollbar::-webkit-scrollbar {
+  height: 6px;
+  width: 6px;
+}
+.thin-scrollbar::-webkit-scrollbar-thumb {
+  background: rgb(var(--faint) / 0.4);
+  border-radius: 999px;
+}
+
+/* ---- Safe area helpers ---- */
+.safe-top {
   padding-top: env(safe-area-inset-top);
+}
+.safe-bottom {
   padding-bottom: env(safe-area-inset-bottom);
+}
+.pb-safe {
+  padding-bottom: calc(env(safe-area-inset-bottom) + 0.5rem);
+}
+
+/* ============================================================
+   Component utilities
+   ============================================================ */
+@layer components {
+  .glass {
+    background-color: rgb(var(--glass-bg) / var(--glass-alpha));
+    -webkit-backdrop-filter: saturate(180%) blur(20px);
+    backdrop-filter: saturate(180%) blur(20px);
+    border: 1px solid rgb(var(--line) / var(--line-alpha));
+  }
+
+  .card {
+    background-color: rgb(var(--surface));
+    border: 1px solid rgb(var(--line) / var(--line-alpha));
+    border-radius: 1.25rem;
+  }
+
+  .press {
+    transition: transform 0.18s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  .press:active {
+    transform: scale(0.97);
+  }
+
+  .focus-ring {
+    outline: none;
+  }
+  .focus-ring:focus-visible {
+    box-shadow: 0 0 0 2px rgb(var(--bg)), 0 0 0 4px rgb(var(--accent) / 0.6);
+  }
+
+  .btn-accent {
+    background-color: rgb(var(--accent));
+    color: rgb(var(--accent-ink));
+  }
+
+  .input {
+    height: 3rem;
+    width: 100%;
+    border-radius: 1rem;
+    border: 1px solid rgb(var(--line) / var(--line-alpha));
+    background-color: rgb(var(--surface));
+    padding-left: 1rem;
+    padding-right: 1rem;
+    color: rgb(var(--ink));
+    font-size: 15px;
+    outline: none;
+    transition: box-shadow 0.15s ease, border-color 0.15s ease;
+  }
+  .input::placeholder {
+    color: rgb(var(--faint));
+  }
+  .input:focus-visible {
+    border-color: rgb(var(--accent) / 0.5);
+    box-shadow: 0 0 0 3px rgb(var(--accent) / 0.14);
+  }
+
+  /* Skeleton shimmer block */
+  .skeleton {
+    position: relative;
+    overflow: hidden;
+    background-color: rgb(var(--faint) / 0.16);
+  }
+  .skeleton::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    transform: translateX(-100%);
+    background: linear-gradient(
+      90deg,
+      transparent,
+      rgb(var(--faint) / 0.14),
+      transparent
+    );
+    animation: shimmer 1.6s infinite;
+  }
+
+  .text-balance {
+    text-wrap: balance;
+  }
+}
+
+/* Gradient text helper for hero accents */
+.text-gradient {
+  background: linear-gradient(120deg, rgb(var(--ink)), rgb(var(--accent)));
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+/* Reduced motion respect */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
 }

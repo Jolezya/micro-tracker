@@ -1,0 +1,90 @@
+// Subscription tiers. Prices in NOK per month.
+export const PLANS = [
+  {
+    id: 'free',
+    name: 'Free',
+    tagline: 'Everything you need to get started',
+    price: 0,
+    badge: null,
+    accent: '#64748b',
+    limits: { listings: 5 },
+    features: [
+      { text: 'Up to 5 active listings', included: true },
+      { text: 'Basic search visibility', included: true },
+      { text: 'Standard support', included: true },
+      { text: 'Basic listing analytics', included: true },
+      { text: 'Ads displayed', included: true, note: true },
+      { text: 'Higher search ranking', included: false },
+      { text: 'Featured listings', included: false },
+      { text: 'Premium seller badge', included: false },
+    ],
+  },
+  {
+    id: 'premium',
+    name: 'KA Premium',
+    tagline: 'For active sellers who want to be seen',
+    price: 99,
+    badge: 'Premium',
+    accent: '#0f6c54',
+    limits: { listings: 50 },
+    popular: true,
+    features: [
+      { text: 'Everything in Free', included: true },
+      { text: 'Up to 50 active listings', included: true },
+      { text: 'Higher search ranking', included: true },
+      { text: 'Advanced analytics', included: true },
+      { text: 'Priority customer support', included: true },
+      { text: 'Premium seller badge', included: true },
+      { text: 'Featured listings', included: true },
+      { text: 'Reduced ads', included: true },
+    ],
+  },
+  {
+    id: 'gold',
+    name: 'KA Gold',
+    tagline: 'Maximum exposure and pro seller tools',
+    price: 249,
+    badge: 'Gold',
+    accent: '#b08d4a',
+    limits: { listings: Infinity },
+    features: [
+      { text: 'Everything in Premium', included: true },
+      { text: 'Unlimited listings', included: true },
+      { text: 'Top placement in results', included: true },
+      { text: 'Verified Gold badge', included: true },
+      { text: 'AI pricing suggestions', included: true },
+      { text: 'Listing performance analytics', included: true },
+      { text: 'Profile customization & themes', included: true },
+      { text: 'Advanced seller tools', included: true },
+    ],
+  },
+  {
+    id: 'enterprise',
+    name: 'Enterprise',
+    tagline: 'For dealerships, agencies & retailers',
+    price: null,
+    priceLabel: "Let's talk",
+    badge: 'Business',
+    accent: '#4f46e5',
+    limits: { listings: Infinity },
+    features: [
+      { text: 'Unlimited users & listings', included: true },
+      { text: 'Company page & branding', included: true },
+      { text: 'Employee & inventory management', included: true },
+      { text: 'Analytics & lead management', included: true },
+      { text: 'Bulk uploads & API access', included: true },
+      { text: 'Priority support', included: true },
+      { text: 'Dedicated account manager', included: true },
+    ],
+  },
+];
+
+export const PLAN_MAP = Object.fromEntries(PLANS.map((p) => [p.id, p]));
+
+// Badge shown on a seller depending on their plan
+export const PLAN_BADGE = {
+  free: null,
+  premium: { label: 'Premium', color: '#0f6c54' },
+  gold: { label: 'Gold', color: '#b08d4a' },
+  enterprise: { label: 'Business', color: '#4f46e5' },
+};

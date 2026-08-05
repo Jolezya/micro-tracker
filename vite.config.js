@@ -7,27 +7,47 @@ export default defineConfig({
     react(),
     VitePWA({
       registerType: 'autoUpdate',
-      includeAssets: ['icon.svg', 'apple-touch-icon.png'],
+      includeAssets: ['icon.svg', 'apple-touch-icon.png', 'favicon-32.png'],
+      workbox: {
+        // Cache the app shell + remote listing photos for offline browsing.
+        runtimeCaching: [
+          {
+            urlPattern: ({ url }) =>
+              url.hostname.includes('unsplash.com') || url.hostname.includes('picsum.photos'),
+            handler: 'CacheFirst',
+            options: {
+              cacheName: 'kaira-images',
+              expiration: { maxEntries: 200, maxAgeSeconds: 60 * 60 * 24 * 14 },
+              cacheableResponse: { statuses: [0, 200] },
+            },
+          },
+        ],
+      },
       manifest: {
-        name: 'Micro Tracker',
-        short_name: 'Micro',
-        description: 'Premium fitness & nutrition tracking by Peter',
-        theme_color: '#0A1628',
-        background_color: '#0A1628',
+        name: 'Kaira — Premium Marketplace',
+        short_name: 'Kaira',
+        description: 'A premium Nordic marketplace. Buy and sell almost anything, your way.',
+        theme_color: '#0b0c0e',
+        background_color: '#0b0c0e',
         display: 'standalone',
         orientation: 'portrait',
         start_url: '/',
         scope: '/',
+        categories: ['shopping', 'lifestyle', 'business'],
         icons: [
-          { src: 'icon-192.png',  sizes: '192x192', type: 'image/png' },
-          { src: 'icon-512.png',  sizes: '512x512', type: 'image/png' },
-          { src: 'icon-512.png',  sizes: '512x512', type: 'image/png', purpose: 'maskable' }
-        ]
-      }
-    })
+          { src: 'icon-192.png', sizes: '192x192', type: 'image/png' },
+          { src: 'icon-512.png', sizes: '512x512', type: 'image/png' },
+          { src: 'icon-512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
+        ],
+      },
+    }),
   ],
   server: {
     host: true,
-    port: 5173
-  }
+    port: 5173,
+  },
+  test: {
+    environment: 'jsdom',
+    globals: true,
+  },
 });

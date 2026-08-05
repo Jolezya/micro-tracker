@@ -1,47 +1,139 @@
-# Micro Tracker
+# Kaira — Premium Marketplace
 
-A premium fitness & nutrition tracker — navy & gold brand aesthetic, built as an installable web app.
+> A premium Nordic marketplace, inspired by the functionality of Finn.no but redesigned from
+> scratch for a world-class, App-Store-ready experience. Buy and sell almost anything — **Kaira
+> connects buyers and sellers and never processes payments**. People settle their own way
+> (Vipps, MobilePay, Swish, bank transfer, cash, in person… whatever they agree on).
 
-Clients open the URL on their phone, tap **Share → Add to Home Screen**, and the tracker lives as an app icon. Works offline. No app store needed.
+Built as an installable, offline-capable **PWA** — it runs on iOS, Android and the responsive web
+from a single codebase. Add it to your home screen and it behaves like a native app.
 
----
-
-## Quick deploy
-
-1. **GitHub:** create a repo called `micro-tracker`, upload the contents of this folder
-2. **Vercel:** sign up at vercel.com, import the GitHub repo, click Deploy
-3. Your app is live at `micro-tracker.vercel.app`
+![Kaira](public/icon.svg)
 
 ---
 
-## Run locally
+## ✨ Highlights
+
+- **Premium design system** — Scandinavian minimalism, glassmorphism, soft shadows, luxury spacing,
+  fluid Framer Motion transitions, micro-interactions, skeleton loading, pull-to-refresh, swipeable
+  galleries with **pinch-to-zoom**, and full **light / dark mode**.
+- **Every screen implemented & working** — Home, Search, Listing detail, Seller profiles, real-time
+  style Messaging, a 3-step Sell flow, Notifications, Subscription plans, an Admin dashboard, and Auth.
+- **Smart features (on-device AI heuristics)** — auto category detection, title & description
+  generation, price suggestions from comparable listings, duplicate detection, fraud / trust scoring,
+  and smart recommendations. All transparent, deterministic and unit-tested.
+- **Rich, realistic content** — 30+ listings across every category (Tesla Model Y, BMW M3, Audi RS6,
+  luxury villa, cabin, iPhone, MacBook Pro, PS5, designer furniture, Rolex, Louis Vuitton, road bike,
+  kayak, Pokémon cards, pets, a boat, a job, a service…), each with a seller, price, location and specs.
+- **Fast** — route-level code splitting, lazy loading, cached listing imagery, instant client-side
+  search, infinite content and a ~110 KB gzipped initial bundle.
+- **Accessible** — semantic markup, focus-visible rings, `aria-label`s, reduced-motion support,
+  theme-aware color tokens and large tap targets.
+
+---
+
+## 🧱 Tech stack
+
+| Area | Choice |
+|------|--------|
+| Framework | **React 18** + **Vite 5** |
+| Routing | **react-router-dom 6** (lazy routes) |
+| Styling | **Tailwind CSS** with a CSS-variable semantic token system (light/dark) |
+| Animation | **Framer Motion** |
+| Icons | **lucide-react** |
+| Charts | **Recharts** (admin analytics) |
+| State | React Context + `useReducer`, persisted to `localStorage` |
+| PWA | **vite-plugin-pwa** (Workbox) — installable + offline |
+| Tests | **Vitest** |
+
+### Why a client-first architecture?
+
+The app ships with a fully-typed **data layer** (`src/data`) and a **store** (`src/lib/store.jsx`)
+that acts as a local backend: listings, users, conversations, notifications, saved items, drafts and
+subscriptions all live in a single reducer and persist across sessions. Every read/write goes through
+action creators, so swapping in a real REST/GraphQL backend is a matter of replacing the reducer's
+side-effects — the UI never talks to storage directly. See [`ARCHITECTURE.md`](ARCHITECTURE.md).
+
+---
+
+## 🚀 Quick start
 
 ```bash
 npm install
-npm run dev
+npm run dev          # http://localhost:5173
 ```
 
-Open `http://localhost:5173` in your browser.
+```bash
+npm run build        # production build → dist/
+npm run preview      # preview the production build
+npm run test         # run the Vitest suite
+```
+
+### Deploy
+
+Any static host works (the app is a pure SPA + service worker):
+
+- **Vercel / Netlify** — import the repo, framework preset “Vite”, build `npm run build`, output `dist`.
+- **GitHub Pages / S3 / Cloudflare Pages** — upload `dist/`. Ensure SPA fallback rewrites all routes
+  to `/index.html`.
+
+Then open the URL on a phone → **Share → Add to Home Screen** to install Kaira as an app.
 
 ---
 
-## Project structure
+## 📁 Project structure
 
-- `src/App.jsx` — all UI and logic
-- `src/foods.js` — built-in food database
-- `public/` — app icons (navy/gold MT monogram)
-- `index.html` — HTML shell with iOS standalone meta tags
-- `vite.config.js` — PWA + build config
-
-Edit `src/App.jsx` to change branding. Colors are in the `C` object at the top.
-Push new entries into the `FOODS` array in `src/foods.js` to expand the database.
+```
+src/
+  data/            # sample content (categories, users, listings, plans)
+  lib/
+    store.jsx      # global state + localStorage persistence (the "backend")
+    ai.js          # category detection, pricing, gen text, fraud/dup, recommend
+    search.js      # pure filter + sort engine
+    format.js      # currency, time-ago, distance, numbers
+    images.js      # generative mesh-gradient listing imagery
+    usePullToRefresh.jsx
+  components/
+    ui/            # Button, Badge, Chip, Avatar, Sheet, Modal, Toast, Switch…
+    layout/        # AppShell (sidebar + bottom nav), headers, logo
+    ListingCard, Gallery, MapView, SmartImage, CategoryIcon
+  screens/         # Home, Search, ListingDetail, SellerProfile, Messages, Chat,
+                   # Sell, Profile, Saved, Notifications, Plans, Admin, Auth
+  App.jsx          # routes (lazy-loaded)
+  main.jsx         # providers (Store, Toast) + Router
+```
 
 ---
 
-## Data storage
+## 🖼️ A note on listing photography
 
-All client data lives in the phone's localStorage — persists on device, does not sync across devices.
+The environment this was built in blocks external image CDNs, and the app is offline-first, so listing
+images are produced by a **generative system** (`src/lib/images.js`): deterministic, premium
+mesh-gradient art, tinted per category and unique per photo. It always looks intentional and never
+breaks.
+
+To use real photography, give any listing a `photos: ["https://…", …]` array — `<SmartImage>` tries
+those first and gracefully falls back to the generator on error. Remote images are also runtime-cached
+by the service worker for offline viewing.
 
 ---
 
-Crafted by Peter.
+## 🔌 Subscriptions
+
+Four tiers — **Free**, **KA Premium**, **KA Gold** and **Enterprise** — unlock features (visibility,
+listing limits, analytics, badges, AI tools). Consistent with the product principle, **Kaira never
+processes payments**; plans simply toggle capabilities in the store.
+
+---
+
+## 🧪 Tests
+
+`npm run test` runs the Vitest suite in `src/lib/__tests__`, covering the pure logic: search
+filter/sort, formatting, distance math, and every AI heuristic (category detection, pricing,
+generation, duplicate & fraud detection, recommendations) plus the deterministic image generator.
+
+---
+
+## 📄 License
+
+Sample/demo project. Brand name “Kaira” and all content are fictional.

@@ -7,11 +7,24 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="mobile-web-app-capable" content="yes" />
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-    <meta name="apple-mobile-web-app-title" content="Micro" />
-    <meta name="theme-color" content="#0A1628" />
-    <meta name="description" content="Micro Tracker — premium fitness & nutrition tracker by Peter" />
-    <title>Micro Tracker</title>
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="apple-mobile-web-app-title" content="Kaira" />
+    <meta name="theme-color" content="#0b0c0e" media="(prefers-color-scheme: dark)" />
+    <meta name="theme-color" content="#faf9f6" media="(prefers-color-scheme: light)" />
+    <meta name="description" content="Kaira — a premium Nordic marketplace. Buy and sell almost anything, your way." />
+    <title>Kaira — Premium Marketplace</title>
+    <script>
+      // Set theme before first paint to avoid flash-of-wrong-theme
+      (function () {
+        try {
+          var t = localStorage.getItem('kaira.theme');
+          if (!t) t = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+          document.documentElement.setAttribute('data-theme', t);
+        } catch (e) {
+          document.documentElement.setAttribute('data-theme', 'light');
+        }
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>
