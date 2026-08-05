@@ -267,7 +267,7 @@ function FiltersSheet({ open, onClose, filters, update, clearAll, resultCount })
       <div className="space-y-6 py-2">
         {/* Price */}
         <div>
-          <h3 className="mb-2 text-sm font-bold text-ink">Price range (kr)</h3>
+          <h3 className="mb-2 text-sm font-bold text-ink">Price range (ZMW)</h3>
           <div className="flex items-center gap-3">
             <input
               type="number"

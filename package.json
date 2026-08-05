@@ -3,7 +3,7 @@
   "private": true,
   "version": "1.0.0",
   "type": "module",
-  "description": "Kaira — a premium Nordic marketplace. Buy and sell almost anything.",
+  "description": "Kaira — a premium Zambian marketplace. Buy and sell almost anything.",
   "scripts": {
     "dev": "vite",
     "build": "vite build",

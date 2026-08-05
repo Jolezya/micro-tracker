@@ -2,7 +2,7 @@ import React, { useMemo, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { MapPin, Navigation } from 'lucide-react';
 import { ListingRow } from './ListingCard.jsx';
-import { formatPrice } from '../lib/format.js';
+import { formatPrice, kwachaCompact } from '../lib/format.js';
 
 // A lightweight, offline stylised map. Pins are positioned by lat/lng within
 // the data's bounding box — no external tile service required.
@@ -80,7 +80,7 @@ export function MapView({ listings }) {
                 }`}
               >
                 <MapPin size={11} className={active ? '' : 'text-accent'} />
-                {formatPrice(l).replace(' kr', 'k').replace(/\s/g, '')}
+                {l.price > 0 ? kwachaCompact(l.price) : formatPrice(l)}
               </motion.span>
             </button>
           );

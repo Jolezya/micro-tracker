@@ -1,9 +1,12 @@
 # Kaira — Premium Marketplace
 
-> A premium Nordic marketplace, inspired by the functionality of Finn.no but redesigned from
+> A premium **Zambian** marketplace, inspired by the functionality of Finn.no but redesigned from
 > scratch for a world-class, App-Store-ready experience. Buy and sell almost anything — **Kaira
 > connects buyers and sellers and never processes payments**. People settle their own way
-> (Vipps, MobilePay, Swish, bank transfer, cash, in person… whatever they agree on).
+> (MTN / Airtel Mobile Money, bank transfer, cash, in person… whatever they agree on).
+>
+> Localised for Zambia: prices in **Kwacha (ZMW)**, and a location picker covering **every district
+> across all 10 provinces**.
 
 Built as an installable, offline-capable **PWA** — it runs on iOS, Android and the responsive web
 from a single codebase. Add it to your home screen and it behaves like a native app.

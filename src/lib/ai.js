@@ -110,21 +110,22 @@ export function suggestPrice({ category, condition, brand, comps = [] } = {}) {
   };
 }
 
+// Fallback base prices in Zambian Kwacha (used when there are no comparables).
 const DEFAULT_BASE = {
-  vehicles: 350000,
-  property: 5000000,
-  electronics: 6000,
-  furniture: 4000,
-  fashion: 3000,
-  sports: 6000,
-  collectibles: 5000,
-  pets: 15000,
-  boats: 800000,
-  motorcycles: 90000,
+  vehicles: 1200000,
+  property: 12000000,
+  electronics: 25000,
+  furniture: 9000,
+  fashion: 8000,
+  sports: 20000,
+  collectibles: 90000,
+  pets: 6000,
+  boats: 1500000,
+  motorcycles: 250000,
   jobs: 0,
-  services: 800,
-  business: 20000,
-  everything: 800,
+  services: 500,
+  business: 60000,
+  everything: 1500,
 };
 
 // ---------- Duplicate detection ----------

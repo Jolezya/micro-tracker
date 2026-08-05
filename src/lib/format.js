@@ -5,13 +5,26 @@ export function formatPrice(listing) {
   if (listing.priceLabel) return listing.priceLabel;
   if (listing.price === 0) return 'Free';
   const suffix = listing.priceSuffix ?? '';
-  return `${kr(listing.price)}${suffix}`;
+  return `${kwacha(listing.price)}${suffix}`;
 }
 
-export function kr(amount) {
+// Zambian Kwacha. Written with a "K" prefix, e.g. K1,250,000.
+export function kwacha(amount) {
   if (amount == null) return '';
-  return `${new Intl.NumberFormat('nb-NO').format(Math.round(amount))} kr`;
+  return `K${new Intl.NumberFormat('en-ZM').format(Math.round(amount))}`;
 }
+
+// Compact currency for tight spaces (map pins): K1.2M, K419k, K800.
+export function kwachaCompact(amount) {
+  if (amount == null) return '';
+  if (amount === 0) return 'Free';
+  if (amount >= 1_000_000) return `K${(amount / 1_000_000).toFixed(1)}M`;
+  if (amount >= 1000) return `K${Math.round(amount / 1000)}k`;
+  return `K${Math.round(amount)}`;
+}
+
+// Backwards-compatible alias (older imports).
+export const kr = kwacha;
 
 export function compactNumber(n) {
   if (n == null) return '0';

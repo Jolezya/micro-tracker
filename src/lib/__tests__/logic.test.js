@@ -1,8 +1,9 @@
 import { describe, it, expect } from 'vitest';
 import { filterListings, sortListings, countActiveFilters, DEFAULT_FILTERS } from '../search.js';
 import { detectCategory, suggestPrice, suggestTitle, generateDescription, isDuplicate, fraudScore, recommend } from '../ai.js';
-import { kr, timeAgo, distanceKm, formatDistance, compactNumber, initials, formatPrice } from '../format.js';
+import { kwacha, kwachaCompact, timeAgo, distanceKm, formatDistance, compactNumber, initials, formatPrice } from '../format.js';
 import { gradientArt } from '../images.js';
+import { TOWNS_FULL, TOWN_NAMES, findTown, townCoords, locationOf, PROVINCES } from '../../data/locations.js';
 
 const NOW = Date.parse('2026-08-05T09:00:00Z');
 const L = (over = {}) => ({
@@ -13,14 +14,20 @@ const L = (over = {}) => ({
 });
 
 describe('format', () => {
-  it('formats NOK', () => {
-    expect(kr(1234567)).toMatch(/1\D?234\D?567 kr/);
-    expect(kr(0)).toBe('0 kr');
+  it('formats Kwacha', () => {
+    expect(kwacha(1234567)).toBe('K1,234,567');
+    expect(kwacha(0)).toBe('K0');
+  });
+  it('formats compact Kwacha for tight spaces', () => {
+    expect(kwachaCompact(1050000)).toBe('K1.1M');
+    expect(kwachaCompact(28000)).toBe('K28k');
+    expect(kwachaCompact(800)).toBe('K800');
+    expect(kwachaCompact(0)).toBe('Free');
   });
   it('formatPrice handles free, labels and suffixes', () => {
     expect(formatPrice({ price: 0 })).toBe('Free');
     expect(formatPrice({ priceLabel: 'Competitive' })).toBe('Competitive');
-    expect(formatPrice({ price: 890, priceSuffix: '/hr' })).toMatch(/890 kr\/hr/);
+    expect(formatPrice({ price: 890, priceSuffix: '/hr' })).toBe('K890/hr');
   });
   it('timeAgo is relative and deterministic', () => {
     expect(timeAgo(NOW - 30 * 1000, NOW)).toBe('just now');
@@ -127,6 +134,40 @@ describe('ai heuristics', () => {
       L({ id: 'other', category: 'furniture', price: 900 }),
     ];
     expect(recommend(target, [target, ...pool])[0].id).toBe('same');
+  });
+});
+
+describe('locations (Zambia)', () => {
+  it('covers all 10 provinces and a broad set of towns', () => {
+    expect(PROVINCES).toHaveLength(10);
+    expect(TOWN_NAMES.length).toBeGreaterThan(90);
+    expect(TOWN_NAMES).toContain('Lusaka');
+    expect(TOWN_NAMES).toContain('Kitwe');
+    expect(TOWN_NAMES).toContain('Livingstone');
+    expect(TOWN_NAMES).toContain('Solwezi');
+    expect(TOWN_NAMES).toContain('Mongu');
+    expect(TOWN_NAMES).toContain('Chinsali'); // Muchinga
+  });
+  it('every town resolves to coordinates inside Zambia', () => {
+    for (const t of TOWNS_FULL) {
+      expect(t.lat).toBeGreaterThan(-19);
+      expect(t.lat).toBeLessThan(-8);
+      expect(t.lng).toBeGreaterThan(21);
+      expect(t.lng).toBeLessThan(34);
+    }
+  });
+  it('findTown is case-insensitive and locationOf builds a listing location', () => {
+    expect(findTown('lusaka').province).toBe('Lusaka');
+    expect(findTown('nope')).toBeNull();
+    const loc = locationOf('Kitwe', 'Riverside');
+    expect(loc.city).toBe('Kitwe');
+    expect(loc.area).toBe('Riverside');
+    expect(loc.province).toBe('Copperbelt');
+  });
+  it('derives coordinates for towns without explicit coords', () => {
+    const c = townCoords({ name: 'Nsama', province: 'Northern' });
+    expect(typeof c.lat).toBe('number');
+    expect(typeof c.lng).toBe('number');
   });
 });
 

@@ -26,7 +26,7 @@ export default defineConfig({
       manifest: {
         name: 'Kaira — Premium Marketplace',
         short_name: 'Kaira',
-        description: 'A premium Nordic marketplace. Buy and sell almost anything, your way.',
+        description: 'A premium Zambian marketplace. Buy and sell almost anything, your way.',
         theme_color: '#0b0c0e',
         background_color: '#0b0c0e',
         display: 'standalone',

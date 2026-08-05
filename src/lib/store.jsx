@@ -89,7 +89,7 @@ function seedNotifications() {
   });
   return [
     n('message', 'New message from Marte', 'Let me think — can do 174k…', 4, { convId: 'c_seed_rolex' }),
-    n('price', 'Price drop', 'Tesla Model Y is now 419 000 kr (−10 000)', 300, { listingId: 'l_tesla_y' }),
+    n('price', 'Price drop', 'Tesla Model Y is now K1,050,000 (−K30,000)', 300, { listingId: 'l_tesla_y' }),
     n('search', 'New match for “road bike”', 'Canyon Ultimate CF SLX just listed in Stavanger', 540, { listingId: 'l_roadbike' }),
     n('favorite', 'Someone saved your item', 'Your listing was added to 3 favorites today', 720, {}),
     n('system', 'Welcome to Kaira', 'Your account is ready. Complete your profile to build trust.', 1440, {}),

@@ -130,7 +130,7 @@ export default function Plans() {
         </div>
 
         <p className="mt-8 text-center text-xs text-faint">
-          Prices in NOK. Cancel anytime. Kaira never processes buyer–seller payments.
+          Prices in Kwacha (ZMW). Cancel anytime. Kaira never processes buyer–seller payments.
         </p>
       </Container>
     </div>

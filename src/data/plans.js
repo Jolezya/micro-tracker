@@ -1,4 +1,4 @@
-// Subscription tiers. Prices in NOK per month.
+// Subscription tiers. Prices in Zambian Kwacha (ZMW) per month.
 export const PLANS = [
   {
     id: 'free',

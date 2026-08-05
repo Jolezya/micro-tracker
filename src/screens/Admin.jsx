@@ -30,11 +30,11 @@ const REPORTS = [
   { id: 'r3', listing: 'l_iphone', reason: 'Price too good — scam?', reporter: 'Mia T.', when: '1d ago' },
 ];
 const AUDIT = [
-  { who: 'admin@kaira.no', action: 'Approved listing', target: 'BMW M3 Competition', when: '12 min ago' },
+  { who: 'admin@kaira.zm', action: 'Approved listing', target: 'BMW M3 Competition', when: '12 min ago' },
   { who: 'moderation-bot', action: 'Flagged for review', target: 'Rolex Submariner', when: '48 min ago' },
-  { who: 'astridb', action: 'Upgraded to Gold', target: 'Subscription', when: '3h ago' },
-  { who: 'admin@kaira.no', action: 'Removed listing', target: 'Duplicate: PS5 bundle', when: '1d ago' },
-  { who: 'nordicmotors', action: 'Bulk uploaded', target: '14 vehicles', when: '2d ago' },
+  { who: 'chandam', action: 'Upgraded to Gold', target: 'Subscription', when: '3h ago' },
+  { who: 'admin@kaira.zm', action: 'Removed listing', target: 'Duplicate: PS5 bundle', when: '1d ago' },
+  { who: 'zambezimotors', action: 'Bulk uploaded', target: '14 vehicles', when: '2d ago' },
 ];
 
 export default function Admin() {

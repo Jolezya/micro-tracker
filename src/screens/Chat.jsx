@@ -12,7 +12,7 @@ import { useAllListings, useStore } from '../lib/store.jsx';
 import { getUser } from '../data/users.js';
 import { CATEGORY_MAP } from '../data/categories.js';
 import { listingCover } from '../lib/images.js';
-import { formatPrice } from '../lib/format.js';
+import { formatPrice, kwacha } from '../lib/format.js';
 
 const REPLIES = [
   'Sounds good! When would you like to meet?',
@@ -242,7 +242,7 @@ export default function Chat() {
           <ActionTile
             icon={MapPin}
             label="Location"
-            onClick={() => { setShowActions(false); send('Meet at Oslo S, main entrance', 'location'); }}
+            onClick={() => { setShowActions(false); send('Meet at Manda Hill Mall, main entrance', 'location'); }}
           />
         </div>
       </Sheet>
@@ -258,7 +258,7 @@ export default function Chat() {
             size="lg"
             disabled={!offer}
             onClick={() => {
-              send(`${Number(offer).toLocaleString('nb-NO')} kr`, 'offer');
+              send(kwacha(Number(offer)), 'offer');
               setOffer('');
               setShowOffer(false);
             }}
@@ -279,7 +279,7 @@ export default function Chat() {
               placeholder="0"
               className="h-14 w-full bg-transparent text-2xl font-extrabold text-ink outline-none"
             />
-            <span className="text-xl font-bold text-faint">kr</span>
+            <span className="text-xl font-bold text-faint">ZMW</span>
           </div>
         </div>
       </Sheet>

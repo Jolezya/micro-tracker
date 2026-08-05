@@ -8,9 +8,11 @@ import {
 import { Container } from '../components/layout/Header.jsx';
 import { CategoryIcon } from '../components/CategoryIcon.jsx';
 import { Button, Badge, Chip, Spinner } from '../components/ui/kit.jsx';
+import { Sheet } from '../components/ui/Sheet.jsx';
 import { useToast } from '../components/ui/Toast.jsx';
 import { CATEGORIES, CATEGORY_MAP, CONDITIONS } from '../data/categories.js';
 import { CURRENT_USER } from '../data/users.js';
+import { TOWNS_BY_PROVINCE, locationOf } from '../data/locations.js';
 import { useAllListings, useStore } from '../lib/store.jsx';
 import { gradientArt } from '../lib/images.js';
 import { detectCategory, suggestTitle, suggestPrice, generateDescription } from '../lib/ai.js';
@@ -26,6 +28,7 @@ export default function Sell() {
 
   const [step, setStep] = useState(0);
   const [enhancing, setEnhancing] = useState(false);
+  const [showTowns, setShowTowns] = useState(false);
   const [form, setForm] = useState({
     photos: [],
     title: '',
@@ -101,7 +104,7 @@ export default function Sell() {
     price: Number(form.price) || 0,
     negotiable: form.negotiable,
     description: form.description,
-    location: { city: form.location, area: form.location, lat: 59.91, lng: 10.75 },
+    location: locationOf(form.location),
     photos: form.photos,
     photoCount: form.photos.length,
     tags: [],
@@ -287,7 +290,7 @@ export default function Sell() {
                       placeholder="0"
                       className="h-14 w-full bg-transparent text-2xl font-extrabold text-ink outline-none"
                     />
-                    <span className="text-xl font-bold text-faint">kr</span>
+                    <span className="text-xl font-bold text-faint">ZMW</span>
                   </div>
                   <label className="mt-2 flex items-center gap-2 text-sm text-muted">
                     <button
@@ -329,10 +332,14 @@ export default function Sell() {
 
                 {/* Location */}
                 <Field label="Location">
-                  <div className="flex items-center gap-2 rounded-2xl border border-hairline bg-surface px-4">
+                  <button
+                    onClick={() => setShowTowns(true)}
+                    className="press flex w-full items-center gap-2 rounded-2xl border border-hairline bg-surface px-4 py-3 text-left"
+                  >
                     <MapPin size={18} className="text-faint" />
-                    <input value={form.location} onChange={(e) => set({ location: e.target.value })} className="h-12 w-full bg-transparent text-ink outline-none" />
-                  </div>
+                    <span className="flex-1 text-ink">{form.location || 'Select a town'}</span>
+                    <ChevronRight size={18} className="text-faint" />
+                  </button>
                 </Field>
               </div>
             )}
@@ -395,7 +402,71 @@ export default function Sell() {
           )}
         </div>
       </div>
+
+      <TownPicker
+        open={showTowns}
+        onClose={() => setShowTowns(false)}
+        value={form.location}
+        onSelect={(name) => {
+          set({ location: name });
+          setShowTowns(false);
+        }}
+      />
     </div>
+  );
+}
+
+function TownPicker({ open, onClose, value, onSelect }) {
+  const [q, setQ] = useState('');
+  const groups = useMemo(() => {
+    const needle = q.trim().toLowerCase();
+    return TOWNS_BY_PROVINCE.map((g) => ({
+      province: g.province,
+      towns: g.towns.filter((t) => !needle || t.name.toLowerCase().includes(needle)),
+    })).filter((g) => g.towns.length);
+  }, [q]);
+  const total = groups.reduce((a, g) => a + g.towns.length, 0);
+
+  return (
+    <Sheet open={open} onClose={onClose} title="Choose your town">
+      <div className="sticky top-0 z-10 -mx-5 mb-1 bg-surface/0 px-5 pb-2">
+        <div className="relative">
+          <MapPin size={18} className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-faint" />
+          <input
+            autoFocus
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+            placeholder="Search all Zambian towns…"
+            className="focus-ring h-11 w-full rounded-2xl border border-hairline bg-elevated pl-10 pr-3 text-[15px] text-ink placeholder:text-faint"
+          />
+        </div>
+        <p className="mt-1.5 px-1 text-xs text-faint">{total} towns across all 10 provinces</p>
+      </div>
+      <div className="pb-3">
+        {groups.map((g) => (
+          <div key={g.province} className="mb-3">
+            <p className="sticky top-0 bg-surface px-1 py-1 text-xs font-bold uppercase tracking-wide text-faint">
+              {g.province}
+            </p>
+            <div className="grid grid-cols-2 gap-1.5">
+              {g.towns.map((t) => (
+                <button
+                  key={t.name}
+                  onClick={() => onSelect(t.name)}
+                  className={`press flex items-center justify-between rounded-xl border px-3 py-2.5 text-left text-sm font-medium ${
+                    value === t.name ? 'border-accent bg-accent-soft text-accent' : 'border-hairline bg-surface text-ink'
+                  }`}
+                >
+                  <span className="truncate">{t.name}</span>
+                  {value === t.name && <Check size={16} className="shrink-0" />}
+                </button>
+              ))}
+            </div>
+          </div>
+        ))}
+        {total === 0 && <p className="py-8 text-center text-sm text-muted">No town matches “{q}”.</p>}
+      </div>
+    </Sheet>
   );
 }
 

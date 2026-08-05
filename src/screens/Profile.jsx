@@ -206,7 +206,7 @@ export default function Profile() {
               <LogIn size={18} /> Sign in
             </Button>
           )}
-          <p className="pt-1 text-center text-xs text-faint">Kaira v1.0 · Made in Norway</p>
+          <p className="pt-1 text-center text-xs text-faint">Kaira v1.0 · Made in Zambia 🇿🇲</p>
         </div>
       </Sheet>
     </div>
