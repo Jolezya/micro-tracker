@@ -1,0 +1,1286 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+<title>Math Quest — 3D Adventure</title>
+<style>
+  :root{
+    --bg:#0b1026; --panel:#141a3a; --panel2:#1c2450; --ink:#f4f7ff; --muted:#a8b2e0;
+    --accent:#ffd24a; --accent2:#4ad3ff; --good:#37e39b; --bad:#ff6b6b; --purple:#a76bff;
+    --radius:18px; --font-scale:1;
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+  html,body{margin:0;height:100%;overflow:hidden;background:var(--bg);color:var(--ink);
+    font-family:'Baloo 2',system-ui,'Segoe UI',Roboto,Arial,sans-serif; font-size:calc(16px*var(--font-scale));
+    -webkit-user-select:none; user-select:none; touch-action:none;}
+  canvas{display:block;position:fixed;inset:0;}
+  button{font-family:inherit;cursor:pointer;border:none;color:inherit;}
+  .hidden{display:none !important;}
+  .center{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;flex-direction:column;}
+
+  /* ---------- overlay screens ---------- */
+  .screen{position:fixed;inset:0;z-index:40;display:flex;align-items:center;justify-content:center;
+    background:radial-gradient(1200px 800px at 50% -10%, #23306e 0%, #0b1026 60%);}
+  .card{background:linear-gradient(180deg,var(--panel),var(--panel2));border:2px solid #2c3670;
+    border-radius:var(--radius);padding:22px;max-width:min(760px,92vw);width:100%;box-shadow:0 24px 60px rgba(0,0,0,.5);
+    max-height:92vh;overflow:auto;}
+  h1{font-size:2.6rem;margin:.1em 0;text-align:center;
+    background:linear-gradient(90deg,var(--accent),var(--accent2),var(--purple));-webkit-background-clip:text;background-clip:text;color:transparent;
+    text-shadow:0 4px 24px rgba(74,211,255,.25);}
+  h2{margin:.2em 0 .6em;font-size:1.5rem;text-align:center}
+  .sub{color:var(--muted);text-align:center;margin:0 0 16px}
+  .btn{background:linear-gradient(180deg,#3a4aa0,#2a327a);border:2px solid #4b58c0;border-radius:14px;
+    padding:14px 18px;font-size:1.05rem;font-weight:700;width:100%;margin:6px 0;transition:transform .08s, filter .1s;}
+  .btn:active{transform:scale(.97)}
+  .btn.primary{background:linear-gradient(180deg,#ffd24a,#ffb020);color:#3a2600;border-color:#ffe18a;}
+  .btn.good{background:linear-gradient(180deg,#37e39b,#16b978);color:#053324;border-color:#7ff0c4;}
+  .btn.ghost{background:#1a2150;border-color:#33407e;}
+  .grid{display:grid;gap:10px}
+  .g2{grid-template-columns:1fr 1fr}
+  .g3{grid-template-columns:1fr 1fr 1fr}
+  .row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+  .tag{display:inline-flex;align-items:center;gap:6px;background:#0f1640;border:1px solid #2b3576;border-radius:999px;padding:6px 12px;font-weight:700}
+  .muted{color:var(--muted)}
+
+  /* ---------- character select ---------- */
+  .charrow{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+  .charopt{background:#0f1640;border:2px solid #2b3576;border-radius:14px;padding:12px;text-align:center;transition:.12s}
+  .charopt.sel{border-color:var(--accent);box-shadow:0 0 0 3px rgba(255,210,74,.25)}
+  .charface{font-size:2.4rem}
+
+  /* ---------- HUD ---------- */
+  #hud{position:fixed;inset:0;z-index:20;pointer-events:none;}
+  .hudtop{position:absolute;top:calc(8px + env(safe-area-inset-top));left:8px;right:8px;display:flex;gap:8px;justify-content:space-between;align-items:flex-start;flex-wrap:wrap}
+  .stat{pointer-events:auto;background:rgba(16,22,54,.82);border:1.5px solid #2b3576;border-radius:12px;padding:7px 12px;font-weight:800;display:flex;align-items:center;gap:7px;backdrop-filter:blur(6px);font-size:.95rem}
+  .xpwrap{min-width:150px;flex:1;max-width:280px}
+  .xpbar{height:9px;background:#0c1132;border-radius:6px;overflow:hidden;margin-top:5px;border:1px solid #2b3576}
+  .xpfill{height:100%;width:0;background:linear-gradient(90deg,var(--accent2),var(--purple));transition:width .35s}
+  .streak{color:#ffb84a}
+  .hudbtns{display:flex;gap:8px}
+  .iconbtn{pointer-events:auto;width:44px;height:44px;border-radius:12px;background:rgba(16,22,54,.82);border:1.5px solid #2b3576;font-size:1.3rem;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(6px)}
+
+  .toast{position:absolute;top:96px;left:50%;transform:translateX(-50%);background:rgba(16,22,54,.94);border:2px solid var(--accent);
+    border-radius:14px;padding:10px 18px;font-weight:800;pointer-events:none;opacity:0;transition:opacity .3s, transform .3s;text-align:center}
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+
+  .prompt{position:absolute;left:50%;bottom:120px;transform:translateX(-50%);pointer-events:none;
+    background:rgba(16,22,54,.92);border:2px solid var(--accent2);border-radius:14px;padding:10px 16px;font-weight:800;text-align:center;opacity:0;transition:.15s}
+  .prompt.show{opacity:1}
+
+  /* ---------- touch controls ---------- */
+  #touch{position:fixed;inset:0;z-index:15;pointer-events:none}
+  #joy{position:absolute;left:24px;bottom:calc(28px + env(safe-area-inset-bottom));width:130px;height:130px;border-radius:50%;
+    background:rgba(20,26,58,.5);border:2px solid #33407e;pointer-events:auto;touch-action:none}
+  #knob{position:absolute;left:35px;top:35px;width:60px;height:60px;border-radius:50%;background:rgba(120,140,255,.85);border:2px solid #fff}
+  #actionBtn{position:absolute;right:26px;bottom:calc(40px + env(safe-area-inset-bottom));width:96px;height:96px;border-radius:50%;
+    background:linear-gradient(180deg,#ffd24a,#ffab12);color:#3a2600;border:3px solid #fff3c4;font-weight:900;font-size:1rem;pointer-events:auto;display:flex;align-items:center;justify-content:center;text-align:center;line-height:1.05;box-shadow:0 10px 24px rgba(0,0,0,.4)}
+  #actionBtn:active{transform:scale(.94)}
+
+  /* ---------- question modal ---------- */
+  #qModal{z-index:60}
+  .qcard{max-width:min(560px,94vw)}
+  .qtype{font-size:.85rem;letter-spacing:.05em;text-transform:uppercase;color:var(--accent2);text-align:center;font-weight:800}
+  .qtext{font-size:2rem;font-weight:800;text-align:center;margin:8px 0 4px}
+  .qvisual{display:flex;justify-content:center;margin:6px 0}
+  .choices{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px}
+  .choice{background:#10164a;border:2px solid #33407e;border-radius:14px;padding:16px;font-size:1.35rem;font-weight:800;transition:.1s}
+  .choice:active{transform:scale(.97)}
+  .choice.correct{background:linear-gradient(180deg,#37e39b,#16b978);color:#053324;border-color:#7ff0c4;animation:pop .3s}
+  .choice.wrong{background:linear-gradient(180deg,#ff6b6b,#d63d3d);color:#3a0000;border-color:#ffb3b3}
+  @keyframes pop{0%{transform:scale(1)}50%{transform:scale(1.08)}100%{transform:scale(1)}}
+  .hintbox{margin-top:12px;background:#161c46;border:1.5px dashed #4b58c0;border-radius:12px;padding:12px;color:#ffe7a8;text-align:center;font-weight:600}
+  .enemybar{height:16px;background:#3a0f14;border-radius:8px;border:1px solid #6b1e26;overflow:hidden;margin:6px 0}
+  .enemyfill{height:100%;background:linear-gradient(90deg,#ff8a5b,#ff5b7a);transition:width .3s}
+  .fightscene{text-align:center;font-size:3rem;margin:4px 0}
+  .shake{animation:shk .3s}
+  @keyframes shk{0%,100%{transform:translateX(0)}25%{transform:translateX(-8px)}75%{transform:translateX(8px)}}
+
+  /* ---------- misc panels ---------- */
+  .list{display:grid;gap:8px;margin-top:8px}
+  .listitem{background:#10164a;border:1.5px solid #2b3576;border-radius:12px;padding:12px;display:flex;justify-content:space-between;align-items:center;gap:10px}
+  .locked{opacity:.55}
+  .barfill-sm{height:8px;background:#0c1132;border-radius:5px;overflow:hidden;border:1px solid #2b3576;min-width:80px;flex:1}
+  .barfill-sm > div{height:100%;background:linear-gradient(90deg,var(--good),var(--accent2))}
+  .badgeitem{aspect-ratio:1;display:flex;flex-direction:column;align-items:center;justify-content:center;background:#10164a;border:1.5px solid #2b3576;border-radius:14px;padding:8px;text-align:center;font-size:.75rem;gap:4px}
+  .badgeitem .em{font-size:1.8rem}
+  .toggle{display:flex;justify-content:space-between;align-items:center;background:#10164a;border:1.5px solid #2b3576;border-radius:12px;padding:12px}
+  .switch{width:52px;height:30px;border-radius:16px;background:#33407e;position:relative;transition:.15s}
+  .switch.on{background:var(--good)}
+  .switch b{position:absolute;top:3px;left:3px;width:24px;height:24px;border-radius:50%;background:#fff;transition:.15s}
+  .switch.on b{left:25px}
+  input[type=range]{width:100%}
+  .pin{font-size:2rem;letter-spacing:.4em;text-align:center;background:#10164a;border:2px solid #2b3576;border-radius:12px;padding:10px;color:var(--ink);width:100%}
+  .keypad{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:10px}
+  .keypad button{background:#10164a;border:1.5px solid #2b3576;border-radius:12px;padding:14px;font-size:1.3rem;font-weight:800}
+  .close{position:absolute;top:10px;right:12px;font-size:1.4rem;background:transparent;color:var(--muted);width:40px;height:40px}
+  .flash{position:fixed;inset:0;z-index:70;pointer-events:none;opacity:0;background:radial-gradient(circle,rgba(255,255,255,.5),transparent 60%)}
+  .flash.go{animation:fl .5s}
+  @keyframes fl{0%{opacity:.8}100%{opacity:0}}
+  .small{font-size:.85rem}
+  .kbd{background:#0c1132;border:1px solid #2b3576;border-radius:6px;padding:2px 7px;font-size:.85rem;font-weight:800}
+  a{color:var(--accent2)}
+  ::-webkit-scrollbar{width:8px}::-webkit-scrollbar-thumb{background:#2b3576;border-radius:8px}
+</style>
+<!-- Three.js is vendored locally in ./vendor so the game runs fully offline, no CDN needed. -->
+<script type="importmap">
+{ "imports": { "three": "./vendor/three.module.js" } }
+</script>
+</head>
+<body>
+
+<!-- Loading / offline fallback -->
+<div id="loading" class="screen"><div class="card center" style="border:none;background:none;box-shadow:none">
+  <h1>Math Quest</h1><p class="sub" id="loadmsg">Loading the adventure…</p>
+</div></div>
+
+<div id="app"></div>
+
+<script type="module">
+import * as THREE from 'three';
+window.__mqLoaded = true;
+
+/* =========================================================================
+   MATH QUEST — a 3D educational adventure game
+   Single-file build. Systems: adaptive math engine, 3D world with 5 zones,
+   mini-games (battle, boss, treasure, race, daily), rewards, cosmetics,
+   streaks, achievements, parent dashboard, settings & accessibility.
+   ========================================================================= */
+
+/* ----------------------------- Persistence ----------------------------- */
+const SAVE_KEY = 'mathquest.save.v1';
+function defaultProfile(){
+  return {
+    name:'Explorer', char:0, level:1, xp:0, coins:0, stars:0,
+    badges:{}, owned:{c0:true}, equipped:{skin:'c0',hat:null,pet:null},
+    difficultyTier:1,                    // 1 Explorer, 2 Challenger, 3 Master
+    adaptive:{},                         // per-category difficulty 1..10
+    stats:{},                            // per-category {seen,correct,timeMs}
+    recentMistakes:[],
+    unlocked:{forest:true},
+    zoneProgress:{},                     // zoneId -> correctCount
+    bosses:{},                           // zoneId -> defeated bool
+    bestStreak:0,
+    daily:{date:null, index:0, correct:0, bestScore:0, streak:0, done:false},
+    settings:{music:true,sfx:true,voice:false,textScale:1,highContrast:false},
+    parentPin:'1234',
+    seenQuestions:[],
+    totalCorrect:0, totalSeen:0,
+  };
+}
+let P = load();
+function load(){
+  try{ const s=JSON.parse(localStorage.getItem(SAVE_KEY)); if(s&&s.settings) return Object.assign(defaultProfile(),s); }catch(e){}
+  return defaultProfile();
+}
+function save(){ try{ localStorage.setItem(SAVE_KEY, JSON.stringify(P)); }catch(e){} }
+
+/* ------------------------------- Audio -------------------------------- */
+const Audio2 = (()=>{
+  let ctx=null, musicNodes=[], musicOn=false, musicTimer=null, step=0;
+  function ac(){ if(!ctx){ try{ctx=new (window.AudioContext||window.webkitAudioContext)();}catch(e){} } return ctx; }
+  function tone(freq,dur=0.12,type='sine',vol=0.2,when=0){
+    if(!P.settings.sfx) return; const c=ac(); if(!c) return;
+    const o=c.createOscillator(),g=c.createGain(); o.type=type; o.frequency.value=freq;
+    o.connect(g); g.connect(c.destination); const t=c.currentTime+when;
+    g.gain.setValueAtTime(0,t); g.gain.linearRampToValueAtTime(vol,t+0.01);
+    g.gain.exponentialRampToValueAtTime(0.0001,t+dur); o.start(t); o.stop(t+dur+0.02);
+  }
+  function seq(notes,type='triangle',vol=0.18){ let t=0; notes.forEach(n=>{ tone(n[0],n[1],type,vol,t); t+=n[1]; }); }
+  const sfx={
+    correct:()=>seq([[660,.09],[880,.12]],'triangle',.2),
+    wrong:()=>seq([[240,.14],[180,.18]],'sawtooth',.14),
+    coin:()=>seq([[988,.05],[1319,.08]],'square',.12),
+    star:()=>seq([[784,.07],[988,.07],[1319,.12]],'triangle',.18),
+    level:()=>seq([[523,.1],[659,.1],[784,.1],[1047,.22]],'triangle',.2),
+    click:()=>tone(520,.05,'square',.09),
+    unlock:()=>seq([[392,.12],[523,.12],[784,.2]],'triangle',.2),
+    boss:()=>seq([[110,.2],[130,.2],[98,.3]],'sawtooth',.16),
+    hit:()=>tone(160,.1,'square',.14),
+    win:()=>seq([[523,.12],[659,.12],[784,.12],[1047,.14],[1319,.3]],'triangle',.22),
+  };
+  // gentle background music: arpeggio loop
+  const scale=[261.63,293.66,329.63,392.0,440.0,523.25,587.33];
+  const pattern=[0,2,4,6,4,2,0,4,2,5,4,2];
+  function startMusic(){
+    if(musicOn||!P.settings.music) return; const c=ac(); if(!c) return; musicOn=true; step=0;
+    const tick=()=>{ if(!musicOn) return;
+      const f=scale[pattern[step%pattern.length]]; tone(f,.28,'sine',.05);
+      if(step%4===0) tone(f/2,.5,'triangle',.045);
+      step++; musicTimer=setTimeout(tick,300); };
+    tick();
+  }
+  function stopMusic(){ musicOn=false; if(musicTimer) clearTimeout(musicTimer); }
+  function resume(){ const c=ac(); if(c&&c.state==='suspended') c.resume(); }
+  return {sfx,startMusic,stopMusic,resume,
+    refresh(){ if(P.settings.music) startMusic(); else stopMusic(); }};
+})();
+
+/* --------------------------- Speech (optional) ------------------------- */
+function speak(t){ if(!P.settings.voice||!window.speechSynthesis) return;
+  try{ const u=new SpeechSynthesisUtterance(t); u.rate=1; u.pitch=1.15; speechSynthesis.cancel(); speechSynthesis.speak(u);}catch(e){} }
+
+/* --------------------------- Math Engine ------------------------------ */
+// Categories map to zones. Each generator takes difficulty 1..10.
+const rint=(a,b)=>Math.floor(Math.random()*(b-a+1))+a;
+const pick=a=>a[Math.floor(Math.random()*a.length)];
+const gcd=(a,b)=>b?gcd(b,a%b):a;
+
+function shuffle(a){ for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];} return a; }
+function distractors(ans, spread=6, count=3, positive=true){
+  const set=new Set([ans]); let guard=0;
+  while(set.size<count+1 && guard++<60){
+    let d=ans + rint(-spread,spread); if(d===ans) continue;
+    if(positive && d<0) continue; set.add(d);
+  }
+  return shuffle([...set]);
+}
+
+// Each generator returns {q, ans, choices, hint, visual, category, difficulty}
+const Gen = {
+  addition(d){ const max=[10,20,40,80,150,300,600,1000,2000,5000][d-1]||1000;
+    const a=rint(2,max),b=rint(2,max),ans=a+b;
+    return {q:`${a} + ${b} = ?`, ans, choices:distractors(ans,Math.max(4,Math.round(max/10))), hint:`Add the ones first, then the tens. ${a} + ${b}.`}; },
+  subtraction(d){ const max=[10,20,40,80,150,300,600,1000,2000,5000][d-1]||1000;
+    let a=rint(3,max),b=rint(2,a),ans=a-b;
+    return {q:`${a} − ${b} = ?`, ans, choices:distractors(ans,Math.max(4,Math.round(max/10))), hint:`Count up from ${b} to ${a}, or take away ${b}.`}; },
+  multiplication(d){ const t=[5,6,7,9,10,12,12,20,25,40][d-1]||12; const t2=[5,6,8,9,10,12,15,20,30,60][d-1]||12;
+    const a=rint(2,t),b=rint(2,t2),ans=a*b;
+    return {q:`${a} × ${b} = ?`, ans, choices:distractors(ans,Math.max(6,a+b), 3), hint:`${a} × ${b} means ${b} added ${a} times. Try ${a}×${b-1} then add ${a}.`}; },
+  division(d){ const t=[5,6,7,9,10,12,12,15,20,25][d-1]||12; const b=rint(2,t),ans=rint(2,t),a=b*ans;
+    return {q:`${a} ÷ ${b} = ?`, ans, choices:distractors(ans,Math.max(3,Math.round(t/2))), hint:`How many groups of ${b} fit into ${a}? Think ${b} × ? = ${a}.`}; },
+  mentalmath(d){ const m=[10,15,20,30,50,80,120,200,300,500][d-1]||50; const a=rint(2,m),b=rint(2,m),c=rint(1,Math.min(9,m));
+    let op=pick(['+','-']); let ans= op==='+'? a+b+c : a+b-c; if(ans<0){ ans=a+b+c; op='+'; }
+    return {q:`${a} + ${b} ${op} ${c} = ?`, ans, choices:distractors(ans,8), hint:`Do it step by step: ${a} + ${b}, then ${op} ${c}.`}; },
+  patterns(d){ const start=rint(1,10*d), stepv=rint(2,2+d);
+    const type=pick(['add','mul']); let seqArr=[],ans;
+    if(type==='add'){ for(let i=0;i<4;i++) seqArr.push(start+stepv*i); ans=start+stepv*4;
+      return {q:`Pattern: ${seqArr.join(', ')}, ?`, ans, choices:distractors(ans,stepv+3), hint:`Each number goes up by ${stepv}.`}; }
+    else { const r=rint(2,3); let v=start; for(let i=0;i<3;i++){seqArr.push(v); v*=r;} ans=v;
+      return {q:`Pattern: ${seqArr.join(', ')}, ?`, ans, choices:distractors(ans,Math.round(ans/2)), hint:`Each number is multiplied by ${r}.`}; } },
+  missingnumber(d){ const max=[10,20,40,80,150,300,600,1000,2000,4000][d-1]||100;
+    const a=rint(2,max),ans=rint(2,max),sum=a+ans;
+    return {q:`${a} + ? = ${sum}`, ans, choices:distractors(ans,Math.max(4,Math.round(max/10))), hint:`? = ${sum} − ${a}.`}; },
+
+  fractions(d){ // compare or add simple fractions or recognize
+    const kind=pick(d<3?['recognize','compare']:['compare','addsub','recognize']);
+    if(kind==='recognize'){ const den=pick([2,3,4,5,6,8]); const num=rint(1,den-1);
+      return {q:`What fraction is shaded?`, ans:num, choices:shuffle([num,...new Set([Math.max(1,num-1),num+1,Math.min(den-1,num+ (num<den-1?2:-2))])].filter((v,i,a)=>a.indexOf(v)===i).slice(0,4)),
+        visual:{type:'pie',num,den}, hint:`Count shaded parts out of ${den}. Answer is the top number (numerator).`, labelAns:`${'?'}` , display:v=>`${v}/${den}`, cmpKey:`${num}/${den}`}; }
+    if(kind==='compare'){ const den=pick([3,4,6,8]); let n1=rint(1,den-1),n2=rint(1,den-1),g=0; while(n1===n2&&g++<50) n2=rint(1,den-1); if(n1===n2) n2=(n1%(den-1))+1;
+      const bigger= n1>n2? `${n1}/${den}`:`${n2}/${den}`;
+      const opts=shuffle([`${n1}/${den}`,`${n2}/${den}`]);
+      return {q:`Which is bigger?`, ans:bigger, choices:opts, textChoice:true,
+        visual:{type:'twopie',n1,n2,den}, hint:`Same bottom number, so the bigger top number is bigger.`}; }
+    // addsub same denom
+    const den=pick([4,5,6,8,10]); let n1=rint(1,den-1),n2=rint(1,den-1);
+    if(n1+n2>=den) n2=Math.max(1,den-n1- (rint(0,1))); const ansN=n1+n2;
+    return {q:`${n1}/${den} + ${n2}/${den} = ?`, ans:`${ansN}/${den}`, textChoice:true,
+      choices:shuffle([`${ansN}/${den}`,`${ansN}/${den+2}`,`${ansN+1}/${den}`,`${Math.max(1,ansN-1)}/${den}`].filter((v,i,a)=>a.indexOf(v)===i).slice(0,4)),
+      hint:`Bottom numbers match, so just add the tops: ${n1}+${n2}, keep ${den} on the bottom.`}; },
+
+  decimals(d){ const kind=pick(['add','sub','compare','mul']);
+    const r=()=> (rint(1, d<4?20:99)/10);
+    if(kind==='compare'){ let a=r(),b=r(),g=0; while(a===b&&g++<50) b=r(); if(a===b) b=+(a+0.3).toFixed(1); const ans=(a>b?a:b).toFixed(1);
+      return {q:`Which is bigger?`, ans:String(ans), textChoice:true, choices:shuffle([a.toFixed(1),b.toFixed(1)]),
+        hint:`Compare the whole-number part first, then the tenths.`}; }
+    if(kind==='mul'){ const a=r(), b=rint(2,5); const ans=+(a*b).toFixed(1);
+      return {q:`${a.toFixed(1)} × ${b} = ?`, ans:String(ans), textChoice:true,
+        choices:shuffle([...new Set([ans,+(ans+0.1).toFixed(1),+(ans-0.2).toFixed(1),+(a*(b+1)).toFixed(1)])].slice(0,4).map(String)),
+        hint:`Multiply as if no dot (${Math.round(a*10)}×${b}), then put the dot back one place.`}; }
+    const a=r(),b=r(); if(kind==='sub'&&b>a){ const t=a; /*ensure positive*/ }
+    let x=a,y=b,ans; if(kind==='add'){ ans=+(a+b).toFixed(1); return {q:`${a.toFixed(1)} + ${b.toFixed(1)} = ?`, ans:String(ans), textChoice:true,
+        choices:shuffle([...new Set([ans,+(ans+0.1).toFixed(1),+(ans-0.1).toFixed(1),+(ans+1).toFixed(1)])].slice(0,4).map(String)),
+        hint:`Line up the dots, then add.`}; }
+    if(y>x){[x,y]=[y,x];} ans=+(x-y).toFixed(1);
+    return {q:`${x.toFixed(1)} − ${y.toFixed(1)} = ?`, ans:String(ans), textChoice:true,
+      choices:shuffle([...new Set([ans,+(ans+0.1).toFixed(1),+(Math.abs(ans-0.2)).toFixed(1),+(ans+1).toFixed(1)])].slice(0,4).map(String)),
+      hint:`Line up the dots, then subtract.`}; },
+
+  shapes(d){ const list=[['triangle',3],['square',4],['pentagon',5],['hexagon',6],['octagon',8]];
+    const askSides=Math.random()<.5;
+    if(askSides){ const [name,sides]=pick(list);
+      return {q:`How many sides does a ${name} have?`, ans:sides, choices:shuffle([...new Set([sides,sides+1,sides-1,sides+2])].slice(0,4)),
+        visual:{type:'shape',name}, hint:`Look at the picture and count each straight edge.`}; }
+    const [name,sides]=pick(list);
+    return {q:`Which shape has ${sides} sides?`, ans:name, textChoice:true, choices:shuffle(list.map(s=>s[0])).slice(0,4).includes(name)?shuffle([name,...shuffle(list.map(s=>s[0]).filter(n=>n!==name)).slice(0,3)]):shuffle([name,...list.filter(s=>s[0]!==name).slice(0,3).map(s=>s[0])]),
+      visual:{type:'shape',name}, hint:`Count the sides of each shape.`}; },
+  angles(d){ const kind=pick(['name','sum']);
+    if(kind==='name'){ const deg=pick([30,45,60,90,120,135,150,180]);
+      const ans= deg<90?'acute': deg===90?'right': deg===180?'straight':'obtuse';
+      return {q:`A ${deg}° angle is called…`, ans, textChoice:true, choices:shuffle(['acute','right','obtuse','straight']),
+        visual:{type:'angle',deg}, hint:`Less than 90°=acute, exactly 90°=right, more than 90°=obtuse, 180°=straight.`}; }
+    const a=pick([30,40,50,60,70,80]); const ans=90-a;
+    return {q:`Two angles make a right angle (90°). One is ${a}°. The other?`, ans, choices:distractors(ans,10), hint:`Both add to 90°, so 90 − ${a}.`}; },
+  perimeter(d){ const l=rint(2,4+d*2),w=rint(2,4+d*2),ans=2*(l+w);
+    return {q:`Perimeter of a ${l}×${w} rectangle?`, ans, choices:distractors(ans,Math.max(6,l+w)), visual:{type:'rect',l,w,mode:'perim'},
+      hint:`Perimeter = all sides added: ${l}+${w}+${l}+${w}.`}; },
+  area(d){ const l=rint(2,4+d*2),w=rint(2,4+d*2),ans=l*w;
+    return {q:`Area of a ${l}×${w} rectangle?`, ans, choices:distractors(ans,Math.max(6,l*2)), visual:{type:'rect',l,w,mode:'area'},
+      hint:`Area = length × width = ${l} × ${w}.`}; },
+  volume(d){ const a=rint(2,3+d),b=rint(2,3+d),c=rint(2,3+d),ans=a*b*c;
+    return {q:`Volume of a ${a}×${b}×${c} box?`, ans, choices:distractors(ans,Math.max(8,ans>50?ans/3:10)), visual:{type:'box3d',a,b,c},
+      hint:`Volume = length × width × height = ${a}×${b}×${c}.`}; },
+  symmetry(d){ const shapes=[['A',1],['H',2],['O',4],['E',1],['X',2],['T',1],['S',0],['B',1]];
+    const [ch,lines]=pick(shapes);
+    return {q:`How many lines of symmetry does the letter "${ch}" have?`, ans:lines, choices:shuffle([...new Set([lines,lines+1,Math.max(0,lines-1),lines+2])].slice(0,4)),
+      visual:{type:'letter',ch}, hint:`A line of symmetry folds the shape so both halves match exactly.`}; },
+
+  money(d){ const price=rint(3, 5+d*4)+ (Math.random()<.5?0.5:0); const paid=Math.ceil(price)+rint(1,5+d);
+    const ans=+(paid-price).toFixed(2);
+    return {q:`A toy costs $${price.toFixed(2)}. You pay $${paid}. Change?`, ans:String(ans), textChoice:true,
+      choices:shuffle([...new Set([ans, +(ans+1).toFixed(2), +(ans-0.5).toFixed(2), +(ans+0.5).toFixed(2)])].filter(v=>v>=0).slice(0,4).map(v=>v.toFixed(2))),
+      hint:`Change = money paid − price = ${paid} − ${price.toFixed(2)}.`}; },
+  time(d){ const h=rint(1,6), m=pick([15,20,30,40,45]); const startH=rint(1,9), startM=pick([0,15,30]);
+    let tot=startH*60+startM + h*60+m; let eh=Math.floor(tot/60)%12; if(eh===0) eh=12; let em=tot%60;
+    const ans=`${eh}:${String(em).padStart(2,'0')}`;
+    return {q:`It's ${startH}:${String(startM).padStart(2,'0')}. What time is it ${h}h ${m}min later?`, ans, textChoice:true,
+      choices:shuffle([...new Set([ans, `${eh}:${String((em+15)%60).padStart(2,'0')}`, `${(eh%12)+1}:${String(em).padStart(2,'0')}`, `${eh}:${String((em+45)%60).padStart(2,'0')}`])].slice(0,4)),
+      hint:`Add the hours first, then the minutes. Watch for going past 60 minutes.`}; },
+  distance(d){ const speed=rint(3,6+d), time=rint(2,5+d), ans=speed*time;
+    return {q:`A car goes ${speed} km/h for ${time} hours. Distance?`, ans, choices:distractors(ans,Math.max(6,speed)), hint:`Distance = speed × time = ${speed} × ${time}.`}; },
+  speed(d){ const speed=rint(4,8+d), time=rint(2,5), dist=speed*time;
+    return {q:`You travel ${dist} km in ${time} hours. Speed (km/h)?`, ans:speed, choices:distractors(speed,5), hint:`Speed = distance ÷ time = ${dist} ÷ ${time}.`}; },
+  measurement(d){ const kind=pick(['m2cm','kg2g','l2ml']);
+    if(kind==='m2cm'){ const m=rint(1,5+d),ans=m*100; return {q:`${m} metres = ? centimetres`, ans, choices:distractors(ans,60,3,true), hint:`1 metre = 100 cm, so ${m}×100.`}; }
+    if(kind==='kg2g'){ const kg=rint(1,5+d),ans=kg*1000; return {q:`${kg} kg = ? grams`, ans, choices:distractors(ans,400,3,true), hint:`1 kg = 1000 g.`}; }
+    const l=rint(1,5+d),ans=l*1000; return {q:`${l} litres = ? millilitres`, ans, choices:distractors(ans,400,3,true), hint:`1 litre = 1000 ml.`}; },
+  wordproblem(d){ const kinds=['groups','share','total','left'];
+    const k=pick(kinds); const a=rint(3,5+d*2), b=rint(2,4+d);
+    if(k==='groups'){ const ans=a*b; return {q:`There are ${a} baskets with ${b} apples each. How many apples?`, ans, choices:distractors(ans,a+b), hint:`${a} groups of ${b} → ${a} × ${b}.`}; }
+    if(k==='share'){ const total=a*b, ans=b; return {q:`${total} candies shared equally among ${a} friends. Each gets?`, ans, choices:distractors(ans,4), hint:`Share equally → ${total} ÷ ${a}.`}; }
+    if(k==='total'){ const c=rint(2,6); const ans=a+b+c; return {q:`Sam read ${a} pages, then ${b}, then ${c}. Total pages?`, ans, choices:distractors(ans,6), hint:`Add them all: ${a}+${b}+${c}.`}; }
+    const spent=rint(2,a); const ans=a-spent; return {q:`You had ${a} coins and spent ${spent}. How many left?`, ans, choices:distractors(ans,4), hint:`Take away: ${a} − ${spent}.`}; },
+  logic(d){ const kind=pick(['odd','even','next','double']);
+    if(kind==='double'){ const a=rint(3,6+d*3); const ans=a*2; return {q:`I think of a number, double it, and get ${ans*1}. Wait — double ${a} is ?`, ans, choices:distractors(ans,6), hint:`Double means × 2.`}; }
+    if(kind==='next'){ const s=rint(1,20),step=rint(2,4); const arr=[s,s+step,s+2*step]; const ans=s+3*step;
+      return {q:`Odd one out — find the next: ${arr.join(', ')}, ?`, ans, choices:distractors(ans,step+2), hint:`The jump each time is ${step}.`}; }
+    const n=rint(10,40+d*10); const ans=(n%2===0)?'even':'odd';
+    return {q:`Is ${n} odd or even?`, ans, textChoice:true, choices:shuffle(['odd','even']), hint:`Even numbers end in 0,2,4,6,8.`}; },
+};
+
+// Zone -> categories
+const ZONES = [
+  {id:'forest', name:'Math Forest', emoji:'🌳', color:0x2ec36b, req:0,
+    cats:['addition','subtraction','patterns','missingnumber'], boss:'The Sum Sprite 🍄'},
+  {id:'castle', name:'Multiplication Castle', emoji:'🏰', color:0x9a6bff, req:3,
+    cats:['multiplication','division','mentalmath'], boss:'The Multiplication Dragon 🐉'},
+  {id:'desert', name:'Fraction Desert', emoji:'🏜️', color:0xffb84a, req:7,
+    cats:['fractions','decimals'], boss:'The Fraction Pharaoh 🐫'},
+  {id:'space', name:'Geometry Space Station', emoji:'🚀', color:0x4ad3ff, req:12,
+    cats:['shapes','angles','perimeter','area','volume','symmetry'], boss:'The Geo Bot 🛸'},
+  {id:'city', name:'Logic City', emoji:'🏙️', color:0xff6b8a, req:18,
+    cats:['money','time','distance','speed','measurement','wordproblem','logic'], boss:'The Riddle Master 🎩'},
+];
+const zoneById=id=>ZONES.find(z=>z.id===id);
+const catLabel={addition:'Addition',subtraction:'Subtraction',multiplication:'Multiplication',division:'Division',
+  mentalmath:'Mental Math',patterns:'Patterns',missingnumber:'Missing Numbers',fractions:'Fractions',decimals:'Decimals',
+  shapes:'Shapes',angles:'Angles',perimeter:'Perimeter',area:'Area',volume:'Volume',symmetry:'Symmetry',
+  money:'Money',time:'Time',distance:'Distance',speed:'Speed',measurement:'Measurement',wordproblem:'Word Problems',logic:'Logic'};
+
+// Adaptive difficulty per category
+function getDiff(cat){ let base=P.adaptive[cat]; if(base==null){ base=1.5+ (P.difficultyTier-1)*2; P.adaptive[cat]=base; }
+  const floor=1+(P.difficultyTier-1)*1.5; base=Math.max(base,floor);
+  return Math.min(10, Math.max(1, Math.round(base))); }
+function adapt(cat, correct, ms){
+  let v=P.adaptive[cat]??2;
+  if(correct){ v += ms<6000?0.6:0.3; } else { v -= 0.7; }
+  P.adaptive[cat]=Math.min(10,Math.max(1,v));
+  // stats
+  const s=P.stats[cat]||(P.stats[cat]={seen:0,correct:0,timeMs:0});
+  s.seen++; if(correct)s.correct++; s.timeMs+=ms;
+  P.totalSeen++; if(correct)P.totalCorrect++;
+}
+function makeQuestion(cat){
+  const d=getDiff(cat); let q,guard=0;
+  do{ q=Gen[cat](d); guard++; } while(guard<8 && P.seenQuestions.includes(cat+'|'+q.q));
+  P.seenQuestions.push(cat+'|'+q.q); if(P.seenQuestions.length>40) P.seenQuestions.shift();
+  q.category=cat; q.difficulty=d; if(!q.choices||!q.choices.length){ q.choices=[q.ans]; }
+  // normalize choices to strings for comparison, ensure answer present
+  q.choices=q.choices.map(String);
+  const ansStr=String(q.ans);
+  if(!q.choices.includes(ansStr)){ q.choices[q.choices.length-1]=ansStr; }
+  q.choices=shuffle([...new Set(q.choices)]);
+  // Ensure enough options. Text-answer questions (compare/name) keep their own
+  // options — don't invent numeric junk like "2" for "which fraction is bigger?".
+  const minChoices = q.textChoice ? 2 : 3;
+  let padGuard=0;
+  while(q.choices.length<minChoices && !q.textChoice && padGuard++<10){
+    const cand=String((+ansStr||0)+padGuard+1);
+    if(!q.choices.includes(cand)) q.choices.push(cand);
+  }
+  q.ansStr=ansStr;
+  return q;
+}
+
+/* ------------------------------ DOM helpers --------------------------- */
+const $=(s,r=document)=>r.querySelector(s);
+const el=(tag,cls,html)=>{const e=document.createElement(tag); if(cls)e.className=cls; if(html!=null)e.innerHTML=html; return e;};
+// Choice button factory (shared by every mini-game). In test mode it tags the
+// correct option so automated QA can verify flows; invisible to players.
+function choiceBtn(c,q){ const b=el('button','choice', q.display?q.display(c):c);
+  if(window.__MQTEST && String(c)===String(q.ansStr)) b.dataset.ans='1'; return b; }
+const app=$('#app');
+function applyAccessibility(){
+  document.documentElement.style.setProperty('--font-scale', P.settings.textScale);
+  if(P.settings.highContrast){ document.documentElement.style.setProperty('--bg','#000010'); document.documentElement.style.setProperty('--ink','#ffffff'); }
+  else { document.documentElement.style.setProperty('--bg','#0b1026'); document.documentElement.style.setProperty('--ink','#f4f7ff'); }
+}
+
+/* visual builder for question visuals */
+function buildVisual(v){
+  const wrap=el('div','qvisual');
+  if(!v){ return wrap; }
+  if(v.type==='pie'||v.type==='twopie'){
+    const one=(num,den)=>{ const deg=360*num/den; const c=el('div'); c.style.cssText=`width:110px;height:110px;border-radius:50%;border:3px solid #fff;background:conic-gradient(var(--accent2) 0 ${deg}deg,#1a2150 ${deg}deg 360deg)`;
+      const lbl=el('div','muted small',`${num}/${den}`); lbl.style.textAlign='center'; const box=el('div'); box.append(c,lbl); box.style.margin='0 8px'; return box; };
+    if(v.type==='pie') wrap.append(one(v.num,v.den));
+    else { wrap.style.gap='10px'; wrap.append(one(v.n1,v.den),one(v.n2,v.den)); }
+  } else if(v.type==='shape'){
+    const map={triangle:'M55 8 L100 96 L10 96 Z',square:'M15 15 H95 V95 H15 Z',
+      pentagon:'M55 8 L100 42 L82 98 L28 98 L10 42 Z',hexagon:'M30 12 H80 L100 55 L80 98 H30 L10 55 Z',
+      octagon:'M35 10 H75 L100 35 V75 L75 100 H35 L10 75 V35 Z'};
+    wrap.innerHTML=`<svg width="120" height="120" viewBox="0 0 110 110"><path d="${map[v.name]||map.square}" fill="#4ad3ff" stroke="#fff" stroke-width="3"/></svg>`;
+  } else if(v.type==='angle'){
+    const r=48,rad=v.deg*Math.PI/180, x=55+r*Math.cos(-rad), y=60-r*Math.sin(rad);
+    wrap.innerHTML=`<svg width="150" height="120" viewBox="0 0 150 120"><line x1="55" y1="60" x2="120" y2="60" stroke="#fff" stroke-width="4"/><line x1="55" y1="60" x2="${x}" y2="${y}" stroke="#ffd24a" stroke-width="4"/><text x="70" y="52" fill="#a8b2e0" font-size="12">${v.deg}°</text></svg>`;
+  } else if(v.type==='rect'){
+    const scale=Math.min(12,120/Math.max(v.l,v.w)); const w=v.l*scale, h=v.w*scale;
+    wrap.innerHTML=`<svg width="${w+40}" height="${h+40}" viewBox="0 0 ${w+40} ${h+40}"><rect x="20" y="20" width="${w}" height="${h}" fill="#2a3a8a" stroke="#4ad3ff" stroke-width="3"/><text x="${20+w/2}" y="14" fill="#a8b2e0" font-size="12" text-anchor="middle">${v.l}</text><text x="10" y="${20+h/2}" fill="#a8b2e0" font-size="12" text-anchor="middle">${v.w}</text></svg>`;
+  } else if(v.type==='box3d'){
+    wrap.innerHTML=`<svg width="150" height="130" viewBox="0 0 150 130"><g stroke="#fff" stroke-width="2" fill="#2a3a8a"><polygon points="30,50 90,50 90,110 30,110" fill="#37507a"/><polygon points="30,50 55,25 115,25 90,50" fill="#4a6bb0"/><polygon points="90,50 115,25 115,85 90,110" fill="#2a3a6a"/></g><text x="60" y="128" fill="#a8b2e0" font-size="11" text-anchor="middle">${v.a}×${v.b}×${v.c}</text></svg>`;
+  } else if(v.type==='letter'){
+    wrap.innerHTML=`<div style="font-size:4rem;font-weight:900;color:#ffd24a;width:100px;text-align:center">${v.ch}</div>`;
+  }
+  return wrap;
+}
+
+/* ============================ 3D WORLD =============================== */
+let scene,camera,renderer,clock;
+let player, playerGroup, camYaw=0;
+const worldObjects=[]; // interactables {mesh,type,zone,data,active}
+const keys={};
+let world3DReady=false;
+
+const ZONE_POS={ forest:new THREE.Vector3(0,0,-6), castle:new THREE.Vector3(34,0,-10),
+  desert:new THREE.Vector3(-34,0,-10), space:new THREE.Vector3(22,0,-42), city:new THREE.Vector3(-22,0,-42) };
+
+function init3D(){
+  scene=new THREE.Scene();
+  scene.background=new THREE.Color(0x0b1026);
+  scene.fog=new THREE.Fog(0x0b1026,55,120);
+  camera=new THREE.PerspectiveCamera(60,innerWidth/innerHeight,0.1,300);
+  renderer=new THREE.WebGLRenderer({antialias:true});
+  renderer.setSize(innerWidth,innerHeight); renderer.setPixelRatio(Math.min(devicePixelRatio,2));
+  renderer.shadowMap.enabled=true; document.body.appendChild(renderer.domElement);
+  clock=new THREE.Clock();
+
+  const hemi=new THREE.HemisphereLight(0xbcd4ff,0x223055,1.05); scene.add(hemi);
+  const sun=new THREE.DirectionalLight(0xffffff,1.1); sun.position.set(20,40,10); sun.castShadow=true;
+  sun.shadow.mapSize.set(1024,1024); sun.shadow.camera.left=-80; sun.shadow.camera.right=80; sun.shadow.camera.top=80; sun.shadow.camera.bottom=-80; scene.add(sun);
+
+  // stars in sky
+  const starGeo=new THREE.BufferGeometry(); const sc=[];
+  for(let i=0;i<400;i++){ sc.push((Math.random()-0.5)*400, Math.random()*120+20, (Math.random()-0.5)*400); }
+  starGeo.setAttribute('position',new THREE.Float32BufferAttribute(sc,3));
+  scene.add(new THREE.Points(starGeo,new THREE.PointsMaterial({color:0xffffff,size:0.7})));
+
+  // big ground
+  const ground=new THREE.Mesh(new THREE.CircleGeometry(120,48),new THREE.MeshStandardMaterial({color:0x162a1e}));
+  ground.rotation.x=-Math.PI/2; ground.receiveShadow=true; scene.add(ground);
+
+  buildZones();
+  buildPlayer();
+  world3DReady=true;
+  addEventListener('resize',onResize);
+  animate();
+}
+function onResize(){ if(!renderer) return; camera.aspect=innerWidth/innerHeight; camera.updateProjectionMatrix(); renderer.setSize(innerWidth,innerHeight); }
+
+function labelSprite(text,color='#ffffff',scale=4){
+  const c=document.createElement('canvas'); c.width=512; c.height=256; const g=c.getContext('2d');
+  g.font='bold 76px sans-serif'; g.textAlign='center'; g.textBaseline='middle';
+  g.fillStyle='rgba(10,16,40,.8)'; roundRect(g,16,74,480,110,26); g.fill();
+  g.strokeStyle=color; g.lineWidth=4; roundRect(g,16,74,480,110,26); g.stroke();
+  g.fillStyle=color; g.fillText(text,256,132);
+  const tex=new THREE.CanvasTexture(c); tex.anisotropy=4;
+  const sp=new THREE.Sprite(new THREE.SpriteMaterial({map:tex,transparent:true,depthWrite:false}));
+  sp.scale.set(scale,scale/2,1); return sp;
+}
+function roundRect(g,x,y,w,h,r){ g.beginPath(); g.moveTo(x+r,y); g.arcTo(x+w,y,x+w,y+h,r); g.arcTo(x+w,y+h,x,y+h,r); g.arcTo(x,y+h,x,y,r); g.arcTo(x,y,x+w,y,r); g.closePath(); }
+
+function crystalMesh(color){
+  const g=new THREE.Group();
+  const m=new THREE.Mesh(new THREE.OctahedronGeometry(0.8),new THREE.MeshStandardMaterial({color,emissive:color,emissiveIntensity:.5,metalness:.3,roughness:.2}));
+  m.castShadow=true; m.position.y=1.6; g.add(m);
+  const ring=new THREE.Mesh(new THREE.TorusGeometry(1,0.06,8,24),new THREE.MeshStandardMaterial({color:0xffffff,emissive:0x88aaff}));
+  ring.rotation.x=Math.PI/2; ring.position.y=0.15; g.add(ring);
+  g.userData.spin=m; return g;
+}
+function chestMesh(){
+  const g=new THREE.Group();
+  const base=new THREE.Mesh(new THREE.BoxGeometry(1.2,0.8,0.9),new THREE.MeshStandardMaterial({color:0x8a5a2b}));
+  base.position.y=0.4; base.castShadow=true; g.add(base);
+  const lid=new THREE.Mesh(new THREE.BoxGeometry(1.25,0.4,0.95),new THREE.MeshStandardMaterial({color:0xffcf5a}));
+  lid.position.y=0.95; g.add(lid); return g;
+}
+function monsterMesh(color=0xff6b6b,size=1){
+  const g=new THREE.Group();
+  const body=new THREE.Mesh(new THREE.SphereGeometry(0.9*size,16,16),new THREE.MeshStandardMaterial({color,roughness:.6}));
+  body.position.y=1*size; body.castShadow=true; g.add(body);
+  for(const s of [-1,1]){ const eye=new THREE.Mesh(new THREE.SphereGeometry(0.16*size,8,8),new THREE.MeshStandardMaterial({color:0xffffff}));
+    eye.position.set(0.3*s*size,1.2*size,0.75*size); g.add(eye);
+    const p=new THREE.Mesh(new THREE.SphereGeometry(0.08*size,8,8),new THREE.MeshStandardMaterial({color:0x111111})); p.position.set(0.3*s*size,1.2*size,0.9*size); g.add(p);}
+  g.userData.body=body; return g;
+}
+
+function makeInteractable(mesh,type,zone,data,pos){
+  mesh.position.copy(pos); scene.add(mesh);
+  const obj={mesh,type,zone,data:data||{},active:true};
+  worldObjects.push(obj); return obj;
+}
+
+function buildZones(){
+  ZONES.forEach((z,zi)=>{
+    const c=ZONE_POS[z.id]; const unlocked=!!P.unlocked[z.id];
+    // zone platform
+    const plat=new THREE.Mesh(new THREE.CylinderGeometry(11,11,0.6,40),new THREE.MeshStandardMaterial({color:z.color,roughness:.9}));
+    plat.position.set(c.x,0.3,c.z); plat.receiveShadow=true; scene.add(plat);
+    const rim=new THREE.Mesh(new THREE.TorusGeometry(11,0.3,8,48),new THREE.MeshStandardMaterial({color:0xffffff,emissive:z.color,emissiveIntensity:.3}));
+    rim.rotation.x=Math.PI/2; rim.position.set(c.x,0.65,c.z); scene.add(rim);
+    // sign
+    const sign=labelSprite(`${z.emoji} ${z.name}`,'#ffd24a',7); sign.position.set(c.x,8.5,c.z); scene.add(sign);
+
+    // decorations per zone
+    decorateZone(z,c,zi);
+
+    if(!unlocked){
+      // dome barrier + lock label
+      const dome=new THREE.Mesh(new THREE.SphereGeometry(11,20,16,0,Math.PI*2,0,Math.PI/2),
+        new THREE.MeshStandardMaterial({color:z.color,transparent:true,opacity:.22,side:THREE.DoubleSide}));
+      dome.position.set(c.x,0.4,c.z); scene.add(dome);
+      const lock=labelSprite(`🔒 ${z.req}⭐ to enter`,'#ffd24a',8); lock.position.set(c.x,4,c.z); scene.add(lock);
+      const barrier={mesh:dome,type:'lock',zone:z.id,data:{req:z.req,label:lock},active:true};
+      worldObjects.push(barrier);
+      return; // no challenges until unlocked
+    }
+    populateZoneChallenges(z,c);
+  });
+  // bridges (visual) between forest and neighbors
+  addBridge(ZONE_POS.forest, ZONE_POS.castle);
+  addBridge(ZONE_POS.forest, ZONE_POS.desert);
+  addBridge(ZONE_POS.forest, ZONE_POS.space);
+  addBridge(ZONE_POS.forest, ZONE_POS.city);
+}
+
+function addBridge(a,b){
+  const mid=a.clone().add(b).multiplyScalar(0.5); const dir=b.clone().sub(a); const len=dir.length();
+  const bridge=new THREE.Mesh(new THREE.BoxGeometry(2.4,0.2,len-20),new THREE.MeshStandardMaterial({color:0x6b4a2b}));
+  bridge.position.set(mid.x,0.25,mid.z); bridge.lookAt(b.x,0.25,b.z); bridge.receiveShadow=true; scene.add(bridge);
+}
+
+function decorateZone(z,c,zi){
+  const rand=(r)=>({x:c.x+(Math.random()-0.5)*r, z:c.z+(Math.random()-0.5)*r});
+  if(z.id==='forest'){ for(let i=0;i<10;i++){ const p=rand(16); if(Math.hypot(p.x-c.x,p.z-c.z)<4)continue;
+    const trunk=new THREE.Mesh(new THREE.CylinderGeometry(0.2,0.3,1.2),new THREE.MeshStandardMaterial({color:0x6b4a2b})); trunk.position.set(p.x,0.9,p.z); scene.add(trunk);
+    const leaf=new THREE.Mesh(new THREE.ConeGeometry(1,2,8),new THREE.MeshStandardMaterial({color:0x2f9e4f})); leaf.position.set(p.x,2.2,p.z); leaf.castShadow=true; scene.add(leaf);} }
+  if(z.id==='castle'){ for(const s of [-1,1]){ const t=new THREE.Mesh(new THREE.CylinderGeometry(1,1.2,5,12),new THREE.MeshStandardMaterial({color:0x8a7bd0})); t.position.set(c.x+7*s,2.5,c.z-4); t.castShadow=true; scene.add(t);
+    const cone=new THREE.Mesh(new THREE.ConeGeometry(1.3,1.6,12),new THREE.MeshStandardMaterial({color:0xff6b8a})); cone.position.set(c.x+7*s,5.6,c.z-4); scene.add(cone);} }
+  if(z.id==='desert'){ for(let i=0;i<6;i++){ const p=rand(15); const cactus=new THREE.Mesh(new THREE.CapsuleGeometry(0.4,1.6,4,8),new THREE.MeshStandardMaterial({color:0x3fae5f})); cactus.position.set(p.x,1.2,p.z); cactus.castShadow=true; scene.add(cactus);} }
+  if(z.id==='space'){ const station=new THREE.Mesh(new THREE.TorusGeometry(3,0.6,12,32),new THREE.MeshStandardMaterial({color:0xbfd6ff,metalness:.6,roughness:.3})); station.position.set(c.x,6,c.z-3); station.rotation.x=Math.PI/2.3; scene.add(station);
+    const core=new THREE.Mesh(new THREE.IcosahedronGeometry(1.2),new THREE.MeshStandardMaterial({color:0x4ad3ff,emissive:0x2a6b8a})); core.position.set(c.x,6,c.z-3); scene.add(core); }
+  if(z.id==='city'){ for(let i=0;i<7;i++){ const p=rand(16); const h=rint(2,6); const b=new THREE.Mesh(new THREE.BoxGeometry(1.6,h,1.6),new THREE.MeshStandardMaterial({color:pick([0x5a6bd0,0xff6b8a,0x4ad3ff,0xffd24a]).valueOf()})); b.position.set(p.x,h/2,p.z); b.castShadow=true; scene.add(b);} }
+}
+
+function populateZoneChallenges(z,c){
+  const done=P.bosses[z.id];
+  // challenge crystals
+  const n=5;
+  for(let i=0;i<n;i++){ const ang=(i/n)*Math.PI*2; const r=6.5;
+    const cx=new THREE.Vector3(c.x+Math.cos(ang)*r,0,c.z+Math.sin(ang)*r);
+    const cr=crystalMesh(z.color);
+    makeInteractable(cr,'challenge',z.id,{cat:pick(z.cats)}, cx);
+  }
+  // a treasure chest
+  makeInteractable(chestMesh(),'chest',z.id,{}, new THREE.Vector3(c.x+3,0,c.z+4));
+  // a friendly monster (battle)
+  const mon=monsterMesh(0xff6b6b,0.9);
+  makeInteractable(mon,'battle',z.id,{}, new THREE.Vector3(c.x-4,0,c.z+3));
+  // race gate
+  const gate=new THREE.Group();
+  const post=new THREE.Mesh(new THREE.TorusGeometry(1.4,0.18,10,24),new THREE.MeshStandardMaterial({color:0x4ad3ff,emissive:0x2277aa})); post.position.y=1.6; gate.add(post);
+  makeInteractable(gate,'race',z.id,{}, new THREE.Vector3(c.x-6,0,c.z-4));
+  // boss statue
+  const bossM=monsterMesh(done?0x66cc88:0xff3b5b,1.7);
+  const bLabel=labelSprite(done?'✅ '+z.boss:'👑 BOSS: '+z.boss, done?'#37e39b':'#ff8a8a', 9);
+  bLabel.position.y=4.2; bossM.add(bLabel);
+  makeInteractable(bossM,'boss',z.id,{done}, new THREE.Vector3(c.x,0,c.z-7));
+}
+
+function buildPlayer(){
+  playerGroup=new THREE.Group();
+  const skinColors={c0:0x4ad3ff,c1:0xff6b8a,c2:0x37e39b,c3:0xffd24a};
+  const skin=skinColors[P.equipped.skin]||0x4ad3ff;
+  const body=new THREE.Mesh(new THREE.CapsuleGeometry(0.5,0.9,6,12),new THREE.MeshStandardMaterial({color:skin}));
+  body.position.y=1; body.castShadow=true; playerGroup.add(body);
+  const head=new THREE.Mesh(new THREE.SphereGeometry(0.45,16,16),new THREE.MeshStandardMaterial({color:0xffe0bd}));
+  head.position.y=1.9; head.castShadow=true; playerGroup.add(head);
+  for(const s of [-1,1]){ const eye=new THREE.Mesh(new THREE.SphereGeometry(0.07,8,8),new THREE.MeshStandardMaterial({color:0x111})); eye.position.set(0.15*s,1.95,0.4); playerGroup.add(eye);}
+  // hat
+  if(P.equipped.hat){ const hat=new THREE.Mesh(new THREE.ConeGeometry(0.4,0.6,16),new THREE.MeshStandardMaterial({color:0xff3b5b})); hat.position.y=2.5; playerGroup.add(hat);}
+  // pet follows
+  if(P.equipped.pet){ const pet=new THREE.Mesh(new THREE.SphereGeometry(0.35,12,12),new THREE.MeshStandardMaterial({color:0xffd24a,emissive:0x886600})); pet.position.set(1.2,0.6,0); playerGroup.add(pet); playerGroup.userData.pet=pet; }
+  playerGroup.userData.body=body; playerGroup.userData.head=head;
+  playerGroup.position.set(0,0,2);
+  scene.add(playerGroup); player=playerGroup;
+}
+function rebuildPlayer(){ if(player){ scene.remove(player); } buildPlayer(); }
+
+/* ---------------------------- movement + loop ------------------------- */
+let moveVec=new THREE.Vector2(0,0); // from joystick
+let nearObj=null;
+const SPEED=9;
+function animate(){
+  requestAnimationFrame(animate);
+  const dt=Math.min(clock.getDelta(),0.05);
+  updateMovement(dt);
+  // spin crystals & bob
+  const t=performance.now()/1000;
+  for(const o of worldObjects){ if(o.type==='challenge'&&o.mesh.userData.spin){ o.mesh.userData.spin.rotation.y+=dt*1.5; o.mesh.userData.spin.position.y=1.6+Math.sin(t*2+o.mesh.position.x)*0.2; }
+    if(o.mesh.userData.body&&(o.type==='battle'||o.type==='boss')) o.mesh.userData.body.position.y=(o.type==='boss'?1.7:1)+Math.sin(t*1.5)*0.15; }
+  if(player&&player.userData.pet){ player.userData.pet.position.set(Math.cos(t*2)*1.2,0.6+Math.sin(t*4)*0.1,Math.sin(t*2)*1.2); }
+  detectNearest();
+  updateCamera(dt);
+  renderer.render(scene,camera);
+}
+function updateMovement(dt){
+  if(modalOpen||!player) return;
+  let ix=0,iz=0;
+  if(keys['w']||keys['arrowup'])iz-=1; if(keys['s']||keys['arrowdown'])iz+=1;
+  if(keys['a']||keys['arrowleft'])ix-=1; if(keys['d']||keys['arrowright'])ix+=1;
+  ix+=moveVec.x; iz+=moveVec.y;
+  const len=Math.hypot(ix,iz);
+  if(len>0.05){ ix/=Math.max(1,len); iz/=Math.max(1,len);
+    player.position.x+=ix*SPEED*dt; player.position.z+=iz*SPEED*dt;
+    // keep on the island world radius
+    const r=Math.hypot(player.position.x,player.position.z+15);
+    const target=Math.atan2(ix,iz);
+    player.rotation.y += shortAngle(player.rotation.y,target)*Math.min(1,dt*12);
+    // little bob
+    if(player.userData.body) player.userData.body.position.y=1+Math.abs(Math.sin(performance.now()/120))*0.06;
+    camYaw = target;
+  }
+  // clamp to big circle
+  const maxR=95; const pr=Math.hypot(player.position.x,player.position.z);
+  if(pr>maxR){ player.position.x*=maxR/pr; player.position.z*=maxR/pr; }
+}
+function shortAngle(a,b){ let d=(b-a)%(Math.PI*2); if(d>Math.PI)d-=Math.PI*2; if(d<-Math.PI)d+=Math.PI*2; return d; }
+function updateCamera(dt){
+  if(!player) return;
+  const back=new THREE.Vector3(Math.sin(player.rotation.y),0,Math.cos(player.rotation.y));
+  const desired=player.position.clone().add(new THREE.Vector3(-back.x*11,8,-back.z*11));
+  camera.position.lerp(desired,Math.min(1,dt*4));
+  camera.lookAt(player.position.x,1.5,player.position.z);
+}
+function detectNearest(){
+  if(!player){ return; }
+  let best=null,bd=4.2;
+  for(const o of worldObjects){ if(!o.active) continue;
+    const d=o.mesh.position.distanceTo(player.position);
+    if(d<bd){ bd=d; best=o; }
+  }
+  if(best!==nearObj){ nearObj=best; updatePrompt(); }
+}
+function updatePrompt(){
+  const pr=$('#prompt'); if(!pr||!actionBtn) return;
+  if(!nearObj){ pr.classList.remove('show'); actionBtn.textContent='—'; return; }
+  const map={challenge:'Solve Challenge',chest:'Open Chest',battle:'Math Battle!',boss:'Fight BOSS',race:'Math Race',lock:'Locked Area'};
+  let txt=map[nearObj.type]||'Interact';
+  if(nearObj.type==='lock'){ const req=nearObj.data.req; txt = P.stars>=req? `Enter (press ${isTouch?'ACT':'E'})` : `Need ${req}⭐ (have ${P.stars})`; }
+  pr.innerHTML=`${nearObj.type==='lock'?'🔒':'✨'} ${txt} &nbsp; <span class="kbd">${isTouch?'ACT':'E'}</span>`;
+  pr.classList.add('show');
+  actionBtn.textContent = map[nearObj.type]||'ACT';
+}
+function interact(){
+  Audio2.resume();
+  if(!nearObj||modalOpen) return;
+  const o=nearObj;
+  if(o.type==='challenge') openChallenge(o);
+  else if(o.type==='chest') openChest(o);
+  else if(o.type==='battle') startBattle(o.zone);
+  else if(o.type==='boss') { if(o.data.done){ toast('Boss already defeated! 🏆'); } else startBoss(o.zone,o); }
+  else if(o.type==='race') startRace(o.zone);
+  else if(o.type==='lock') tryUnlock(o);
+}
+
+/* ============================ Rewards ================================= */
+function xpForLevel(lv){ return 50+lv*40; }
+function addXP(n){ P.xp+=n; let leveled=false;
+  while(P.xp>=xpForLevel(P.level)){ P.xp-=xpForLevel(P.level); P.level++; leveled=true; }
+  if(leveled){ Audio2.sfx.level(); flash(); toast(`⭐ LEVEL UP! You're level ${P.level}!`); speak(`Level ${P.level}!`); P.coins+=P.level*5; }
+  updateHUD();
+}
+function addCoins(n){ P.coins+=n; Audio2.sfx.coin(); updateHUD(); }
+function addStars(n){ P.stars+=n; Audio2.sfx.star(); updateHUD(); checkUnlocks(); }
+function grantBadge(id,name,emoji){ if(P.badges[id])return; P.badges[id]={name,emoji,date:Date.now()}; toast(`🏅 Badge earned: ${name}!`); Audio2.sfx.win(); }
+function checkAchievements(){
+  if(P.totalCorrect>=1) grantBadge('first','First Steps','👣');
+  if(P.totalCorrect>=25) grantBadge('sharp','Sharp Mind','🧠');
+  if(P.totalCorrect>=100) grantBadge('genius','Math Genius','🎓');
+  if(P.bestStreak>=5) grantBadge('streak5','On Fire','🔥');
+  if(P.bestStreak>=10) grantBadge('streak10','Unstoppable','⚡');
+  if(P.level>=5) grantBadge('lv5','Rising Star','🌟');
+  const bossCount=Object.values(P.bosses).filter(Boolean).length;
+  if(bossCount>=1) grantBadge('boss1','Boss Slayer','⚔️');
+  if(bossCount>=5) grantBadge('bossAll','World Champion','👑');
+  if(Object.keys(P.unlocked).length>=5) grantBadge('explorer','Grand Explorer','🗺️');
+}
+let streak=0;
+function onCorrect(cat,ms,rewardMult=1){
+  streak++; P.bestStreak=Math.max(P.bestStreak,streak);
+  adapt(cat,true,ms);
+  let coinBonus=0, xpBonus=0;
+  if(streak===3){ toast('🔥 Streak x3! +5 bonus'); coinBonus+=5; }
+  if(streak===5){ toast('🔥🔥 Streak x5! +15 bonus & ⭐'); coinBonus+=15; addStars(1); }
+  if(streak===10){ toast('🔥🔥🔥 MEGA STREAK! +50 bonus & ⭐⭐'); coinBonus+=50; addStars(2); }
+  const base=6+ (Gen[cat]?0:0);
+  addCoins(Math.round((5+streak)*rewardMult)+coinBonus);
+  addXP(Math.round((10+streak*2)*rewardMult)+xpBonus);
+  // zone mission: every 5 correct in a zone grants a star
+  checkAchievements(); updateStreakHUD(); save();
+}
+function onWrong(cat,ms){
+  streak=0; adapt(cat,false,ms);
+  updateStreakHUD();
+}
+function checkUnlocks(){
+  let changed=false;
+  ZONES.forEach(z=>{ if(!P.unlocked[z.id] && P.stars>=z.req){ /* becomes enterable, actual unlock on entering barrier */ } });
+  save();
+}
+
+/* ============================ UI: HUD ================================ */
+let hud, actionBtn, isTouch=matchMedia('(pointer:coarse)').matches || 'ontouchstart' in window;
+function buildHUD(){
+  hud=el('div'); hud.id='hud';
+  hud.innerHTML=`
+   <div class="hudtop">
+     <div class="row" style="gap:8px">
+       <div class="stat">🪙 <span id="hCoins">0</span></div>
+       <div class="stat">⭐ <span id="hStars">0</span></div>
+       <div class="stat streak">🔥 <span id="hStreak">0</span></div>
+     </div>
+     <div class="stat xpwrap">Lv <span id="hLevel">1</span> · XP <span id="hXP">0</span>/<span id="hXPmax">90</span>
+        <div class="xpbar"><div class="xpfill" id="hXPfill"></div></div></div>
+     <div class="hudbtns">
+       <button class="iconbtn" id="btnMap">🗺️</button>
+       <button class="iconbtn" id="btnMenu">☰</button>
+     </div>
+   </div>
+   <div class="toast" id="toast"></div>
+   <div class="prompt" id="prompt"></div>`;
+  app.appendChild(hud);
+
+  const touch=el('div'); touch.id='touch';
+  touch.innerHTML=`<div id="joy"><div id="knob"></div></div><button id="actionBtn">ACT</button>`;
+  app.appendChild(touch);
+  actionBtn=$('#actionBtn',touch);
+  if(!isTouch){ $('#joy',touch).style.display='none'; actionBtn.style.opacity=.55; }
+
+  $('#btnMenu').onclick=()=>{Audio2.sfx.click(); openMenu();};
+  $('#btnMap').onclick=()=>{Audio2.sfx.click(); openMap();};
+  actionBtn.onclick=()=>interact();
+  setupJoystick();
+  updateHUD();
+}
+function updateHUD(){ if(!hud)return;
+  $('#hCoins').textContent=P.coins; $('#hStars').textContent=P.stars; $('#hLevel').textContent=P.level;
+  $('#hXP').textContent=P.xp; $('#hXPmax').textContent=xpForLevel(P.level);
+  $('#hXPfill').style.width=Math.min(100,100*P.xp/xpForLevel(P.level))+'%';
+}
+function updateStreakHUD(){ if($('#hStreak'))$('#hStreak').textContent=streak; }
+let toastTimer;
+function toast(msg){ const t=$('#toast'); if(!t)return; t.textContent=msg; t.classList.add('show'); clearTimeout(toastTimer); toastTimer=setTimeout(()=>t.classList.remove('show'),2400); }
+function flash(){ let f=$('#flash'); if(!f){ f=el('div','flash'); f.id='flash'; document.body.appendChild(f);} f.classList.remove('go'); void f.offsetWidth; f.classList.add('go'); }
+function setupJoystick(){
+  const joy=$('#joy'),knob=$('#knob'); if(!joy)return; let active=false,cx=0,cy=0;
+  const start=e=>{active=true; const r=joy.getBoundingClientRect(); cx=r.left+r.width/2; cy=r.top+r.height/2; move(e);};
+  const move=e=>{ if(!active)return; const t=e.touches?e.touches[0]:e; let dx=t.clientX-cx,dy=t.clientY-cy; const d=Math.hypot(dx,dy),max=45;
+    if(d>max){dx*=max/d;dy*=max/d;} knob.style.left=(35+dx)+'px'; knob.style.top=(35+dy)+'px'; moveVec.set(dx/max,dy/max); };
+  const end=()=>{active=false; knob.style.left='35px'; knob.style.top='35px'; moveVec.set(0,0);};
+  joy.addEventListener('touchstart',start,{passive:true}); joy.addEventListener('touchmove',move,{passive:true}); joy.addEventListener('touchend',end);
+  joy.addEventListener('mousedown',start); addEventListener('mousemove',move); addEventListener('mouseup',end);
+}
+
+/* ============================ Modals ================================= */
+let modalOpen=false;
+function modal(contentBuilder,opts={}){
+  modalOpen=true;
+  const scr=el('div','screen'); scr.style.zIndex=opts.z||55;
+  const card=el('div','card '+(opts.cls||'')); if(opts.qcard) card.classList.add('qcard');
+  if(opts.closable!==false){ const x=el('button','close','✕'); x.onclick=()=>{ closeModal(scr); opts.onClose&&opts.onClose(); }; card.appendChild(x); }
+  contentBuilder(card,()=>closeModal(scr));
+  scr.appendChild(card); app.appendChild(scr);
+  scr._el=card; return scr;
+}
+function closeModal(scr){ if(scr&&scr.parentNode)scr.remove(); modalOpen=!!app.querySelector('.screen:not(#loading)'); }
+
+/* ---- Challenge (single question in world) ---- */
+function openChallenge(obj){
+  const cat=obj.data.cat; askQuestion(cat,{title:`✨ ${zoneById(obj.zone).name} Challenge`,
+    onDone:(correct)=>{ if(correct){ // consume crystal, respawn new elsewhere with new category
+        obj.active=false; obj.mesh.visible=false;
+        const z=zoneById(obj.zone); const c=ZONE_POS[obj.zone];
+        setTimeout(()=>{ obj.mesh.position.set(c.x+(Math.random()-.5)*14,0,c.z+(Math.random()-.5)*14); obj.data.cat=pick(z.cats); obj.active=true; obj.mesh.visible=true; },1500);
+        // zone progress toward star
+        P.zoneProgress[obj.zone]=(P.zoneProgress[obj.zone]||0)+1;
+        if(P.zoneProgress[obj.zone]%5===0){ addStars(1); toast('🌟 Zone mission! +1 Star'); }
+      } }});
+}
+
+/* ---- generic single question asker ---- */
+function askQuestion(cat,{title,onDone,noStreakReward,practice}={}){
+  const t0=performance.now(); let attempts=0, answered=false;
+  const q=makeQuestion(cat);
+  const scr=modal((card,close)=>{
+    card.appendChild(el('div','qtype', (title||catLabel[cat])+` · Lvl ${q.difficulty}`));
+    card.appendChild(el('div','qtext', q.q));
+    card.appendChild(buildVisual(q.visual));
+    const hintBox=el('div','hintbox'); hintBox.style.display='none'; hintBox.textContent='';
+    const choices=el('div','choices');
+    q.choices.forEach(ch=>{ const b=choiceBtn(ch,q);
+      b.onclick=()=>{ if(answered)return; Audio2.resume();
+        if(ch===q.ansStr){ answered=true; b.classList.add('correct'); Audio2.sfx.correct(); speak('Correct!');
+          const ms=performance.now()-t0;
+          if(!practice){ onCorrect(cat,ms); } else { adapt(cat,true,ms); save(); }
+          setTimeout(()=>{ close(); onDone&&onDone(true); },700);
+        } else { attempts++; b.classList.add('wrong'); card.classList.add('shake'); setTimeout(()=>card.classList.remove('shake'),300);
+          Audio2.sfx.wrong(); b.disabled=true;
+          hintBox.style.display='block'; hintBox.innerHTML=`💡 <b>Hint:</b> ${q.hint}`; speak('Try again');
+          if(!practice && attempts===1){ onWrong(cat,performance.now()-t0); recordMistake(q); }
+          if(attempts>=2){ // reveal answer help
+            hintBox.innerHTML=`💡 ${q.hint}<br><span class="small muted">The answer is <b>${q.display?q.display(q.ansStr):q.ansStr}</b>. Tap it to continue.</span>`;
+          }
+        }
+      };
+      choices.appendChild(b);
+    });
+    card.appendChild(choices);
+    card.appendChild(hintBox);
+  },{qcard:true,z:60,closable:!!practice,onClose:()=>{ onDone&&onDone(false); }});
+}
+function recordMistake(q){ P.recentMistakes.unshift({cat:q.category,q:q.q,ans:q.display?q.display(q.ansStr):q.ansStr,t:Date.now()}); if(P.recentMistakes.length>20)P.recentMistakes.pop(); }
+
+/* ---- Treasure chest ---- */
+function openChest(obj){
+  const cat=pick(zoneById(obj.zone).cats);
+  askQuestion(cat,{title:'💎 Treasure Chest',onDone:(ok)=>{ if(ok){ const reward=rint(15,40)+P.level*3; addCoins(reward); addXP(reward); toast(`💎 Treasure! +${reward}🪙 +${reward}XP`); flash();
+    obj.active=false; obj.mesh.visible=false; setTimeout(()=>{ obj.mesh.visible=true; obj.active=true; },20000);
+  }}});
+}
+
+/* ---- Math Battle ---- */
+function startBattle(zoneId){
+  const z=zoneById(zoneId); let hp=100, playerHp=100, qn=0;
+  const scr=modal((card,close)=>{
+    card.appendChild(el('div','qtype','⚔️ Math Battle'));
+    const scene=el('div','fightscene','👾'); card.appendChild(scene);
+    card.appendChild(el('div','small muted','Monster HP')); const bar=el('div','enemybar'); const fill=el('div','enemyfill'); fill.style.width='100%'; bar.appendChild(fill); card.appendChild(bar);
+    card.appendChild(el('div','small muted','Your HP')); const pbar=el('div','enemybar'); pbar.style.background='#0f2a3a'; const pfill=el('div','enemyfill'); pfill.style.background='linear-gradient(90deg,#4ad3ff,#37e39b)'; pfill.style.width='100%'; pbar.appendChild(pfill); card.appendChild(pbar);
+    const holder=el('div'); card.appendChild(holder);
+    Audio2.sfx.boss();
+    function round(){
+      if(hp<=0){ scene.textContent='💥'; holder.innerHTML=`<h2>Victory! 🎉</h2>`; const r=30+P.level*4; addCoins(r); addXP(40); addStars(1); toast(`⚔️ Won! +${r}🪙 +40XP +1⭐`); Audio2.sfx.win(); flash(); checkAchievements(); save(); setTimeout(close,1600); return; }
+      if(playerHp<=0){ holder.innerHTML=`<h2>The monster wins this time!</h2><p class="muted small">You still keep what you earned. Try again!</p>`; setTimeout(close,1800); return; }
+      const cat=pick(z.cats); const q=makeQuestion(cat); const t0=performance.now();
+      holder.innerHTML=''; holder.appendChild(el('div','qtext',q.q)); holder.appendChild(buildVisual(q.visual));
+      const ch=el('div','choices');
+      q.choices.forEach(c=>{ const b=choiceBtn(c,q);
+        b.onclick=()=>{ Audio2.resume(); if(b.disabled)return;
+          if(c===q.ansStr){ b.classList.add('correct'); Audio2.sfx.hit(); const dmg=rint(18,28); hp=Math.max(0,hp-dmg); fill.style.width=hp+'%'; scene.textContent='🗡️'; onCorrect(cat,performance.now()-t0,1); setTimeout(round,600); }
+          else { b.classList.add('wrong'); b.disabled=true; Audio2.sfx.wrong(); playerHp=Math.max(0,playerHp-15); pfill.style.width=playerHp+'%'; card.classList.add('shake'); setTimeout(()=>card.classList.remove('shake'),300); onWrong(cat,performance.now()-t0); recordMistake(q);
+            holder.querySelectorAll('.choice').forEach(x=>{ if((x.textContent)===(q.display?q.display(q.ansStr):q.ansStr)) {} });
+            const hb=el('div','hintbox'); hb.innerHTML='💡 '+q.hint; holder.appendChild(hb); }
+        }; ch.appendChild(b);
+      });
+      holder.appendChild(ch);
+    }
+    round();
+  },{qcard:true,z:60});
+}
+
+/* ---- Boss battle ---- */
+function startBoss(zoneId,obj){
+  const z=zoneById(zoneId); let hp=100, qn=0; const totalQ=6;
+  modal((card,close)=>{
+    card.appendChild(el('div','qtype','👑 BOSS BATTLE'));
+    card.appendChild(el('h2',null,z.boss));
+    const scene=el('div','fightscene', z.boss.slice(-2)); card.appendChild(scene);
+    const bar=el('div','enemybar'); const fill=el('div','enemyfill'); fill.style.width='100%'; bar.appendChild(fill); card.appendChild(bar);
+    const holder=el('div'); card.appendChild(holder);
+    Audio2.sfx.boss(); speak('Boss battle!');
+    function round(){
+      if(hp<=0){ scene.textContent='💫'; holder.innerHTML=`<h2>BOSS DEFEATED! 🏆</h2><p class="muted">You conquered the ${z.name}!</p>`;
+        P.bosses[zoneId]=true; addStars(3); addCoins(80); addXP(120); grantBadge('boss1','Boss Slayer','⚔️'); Audio2.sfx.win(); flash(); checkAchievements();
+        if(obj){ obj.data.done=true; } refreshWorldBoss(zoneId); save(); setTimeout(close,2200); return; }
+      const cat=pick(z.cats); const dPrev=P.adaptive[cat]; P.adaptive[cat]=Math.min(10,(P.adaptive[cat]??3)+qn*0.4); // ramps up
+      const q=makeQuestion(cat); P.adaptive[cat]=dPrev; const t0=performance.now(); qn++;
+      holder.innerHTML=''; holder.appendChild(el('div','small muted',`Question ${qn} · Level ${q.difficulty}`)); holder.appendChild(el('div','qtext',q.q)); holder.appendChild(buildVisual(q.visual));
+      const ch=el('div','choices');
+      q.choices.forEach(c=>{ const b=choiceBtn(c,q);
+        b.onclick=()=>{ Audio2.resume(); if(b.disabled)return;
+          if(c===q.ansStr){ b.classList.add('correct'); Audio2.sfx.hit(); hp=Math.max(0,hp-Math.ceil(100/totalQ)); fill.style.width=hp+'%'; scene.textContent='⚡'; onCorrect(cat,performance.now()-t0,1.5); setTimeout(round,650); }
+          else { b.classList.add('wrong'); b.disabled=true; Audio2.sfx.wrong(); card.classList.add('shake'); setTimeout(()=>card.classList.remove('shake'),300); onWrong(cat,performance.now()-t0); recordMistake(q); const hb=el('div','hintbox'); hb.innerHTML='💡 '+q.hint; holder.appendChild(hb); }
+        }; ch.appendChild(b);
+      });
+      holder.appendChild(ch);
+    }
+    round();
+  },{qcard:true,z:60});
+}
+function refreshWorldBoss(zoneId){
+  const o=worldObjects.find(w=>w.type==='boss'&&w.zone===zoneId); if(!o)return;
+  // recolor + label handled simply by scaling color
+  o.mesh.traverse(m=>{ if(m.material&&m.material.color&&m.geometry&&m.geometry.type==='SphereGeometry'&&m.geometry.parameters.radius>1) m.material.color.set(0x66cc88); });
+}
+
+/* ---- Math Race ---- */
+function startRace(zoneId){
+  const z=zoneById(zoneId); let pos=0, opp=0, cp=0; const track=6;
+  modal((card,close)=>{
+    card.appendChild(el('div','qtype','🏎️ Math Race'));
+    const laneP=el('div'); laneP.style.cssText='position:relative;height:32px;background:#10164a;border-radius:16px;margin:4px 0;border:1px solid #2b3576';
+    const carP=el('div','',' 🏎️'); carP.style.cssText='position:absolute;left:0;top:2px;transition:left .4s;font-size:1.4rem'; laneP.appendChild(carP);
+    const laneO=el('div'); laneO.style.cssText='position:relative;height:32px;background:#2a1030;border-radius:16px;margin:4px 0;border:1px solid #6b1e4e';
+    const carO=el('div','','👻'); carO.style.cssText='position:absolute;left:0;top:2px;transition:left .4s;font-size:1.4rem'; laneO.appendChild(carO);
+    card.append(el('div','small muted','You'),laneP,el('div','small muted','Rival'),laneO);
+    const holder=el('div'); card.appendChild(holder);
+    function draw(){ carP.style.left=(pos/track*90)+'%'; carO.style.left=(opp/track*90)+'%'; }
+    function round(){
+      draw();
+      if(pos>=track){ holder.innerHTML='<h2>🏁 You win the race! 🎉</h2>'; const r=25+P.level*3; addCoins(r); addXP(35); addStars(1); toast(`🏎️ +${r}🪙 +1⭐`); Audio2.sfx.win(); flash(); save(); setTimeout(close,1600); return; }
+      if(opp>=track){ holder.innerHTML='<h2>The rival won — rematch soon!</h2>'; setTimeout(close,1500); return; }
+      const cat=pick(z.cats); const q=makeQuestion(cat); const t0=performance.now();
+      holder.innerHTML=''; holder.appendChild(el('div','small muted',`Checkpoint ${pos+1}/${track}`)); holder.appendChild(el('div','qtext',q.q)); holder.appendChild(buildVisual(q.visual));
+      const ch=el('div','choices');
+      q.choices.forEach(c=>{ const b=choiceBtn(c,q);
+        b.onclick=()=>{ Audio2.resume(); if(b.disabled)return;
+          const fast=(performance.now()-t0)<5000;
+          if(c===q.ansStr){ b.classList.add('correct'); Audio2.sfx.coin(); pos+= fast?2:1; opp+=1; onCorrect(cat,performance.now()-t0,1); setTimeout(round,500); }
+          else { b.classList.add('wrong'); b.disabled=true; Audio2.sfx.wrong(); opp+=1; onWrong(cat,performance.now()-t0); recordMistake(q); const hb=el('div','hintbox'); hb.innerHTML='💡 '+q.hint; holder.appendChild(hb); setTimeout(()=>{},0); }
+        }; ch.appendChild(b);
+      });
+      holder.appendChild(ch);
+    }
+    round();
+  },{qcard:true,z:60});
+}
+
+/* ---- Unlock a zone ---- */
+function tryUnlock(o){
+  if(P.stars>=o.data.req){ P.unlocked[o.zone]=true; Audio2.sfx.unlock(); flash(); toast(`🔓 ${zoneById(o.zone).name} unlocked!`); speak('New area unlocked!');
+    // remove dome + label, populate
+    scene.remove(o.mesh); if(o.data.label) scene.remove(o.data.label); o.active=false;
+    populateZoneChallenges(zoneById(o.zone),ZONE_POS[o.zone]); checkAchievements(); save();
+  } else { toast(`🔒 Need ${o.data.req}⭐ — you have ${P.stars}. Keep solving!`); Audio2.sfx.wrong(); }
+}
+
+/* ============================ Menus ================================= */
+function openMenu(){
+  modal((card,close)=>{
+    card.appendChild(el('h1',null,'Math Quest'));
+    card.appendChild(el('p','sub',`Playing as ${P.name} · Level ${P.level}`));
+    const g=el('div','grid');
+    const item=(label,fn,cls)=>{ const b=el('button','btn '+(cls||''),label); b.onclick=()=>{Audio2.sfx.click(); fn();}; return b; };
+    g.append(
+      item('▶ Continue Adventure',()=>close(),'primary'),
+      item('🧠 Math Practice',()=>{close();openPractice();}),
+      item('🎮 Mini-Games',()=>{close();openMiniGames();}),
+      item('📅 Daily Challenge',()=>{close();openDaily();}),
+      item('🗺️ World Map',()=>{close();openMap();}),
+      item('🧑 Character & Shop',()=>{close();openCharacter();}),
+      item('🏅 Achievements',()=>{close();openAchievements();}),
+      item('👪 Parent / Teacher',()=>{close();openParentGate();},'ghost'),
+      item('⚙️ Settings',()=>{close();openSettings();},'ghost'),
+    );
+    card.appendChild(g);
+    card.appendChild(el('p','muted small','Move: WASD / Arrows or joystick · Interact: E / ACT button',));
+  });
+}
+
+function openMap(){
+  modal((card,close)=>{
+    card.appendChild(el('h2',null,'🗺️ World Map'));
+    card.appendChild(el('p','sub',`⭐ ${P.stars} stars collected`));
+    const list=el('div','list');
+    ZONES.forEach(z=>{ const unlocked=!!P.unlocked[z.id]; const boss=P.bosses[z.id];
+      const it=el('div','listitem'+(unlocked?'':' locked'));
+      const prog=P.zoneProgress[z.id]||0;
+      it.innerHTML=`<div><div style="font-weight:800">${z.emoji} ${z.name}</div>
+        <div class="small muted">${unlocked?(boss?'✅ Boss defeated':'Solved here: '+prog):'🔒 Needs '+z.req+'⭐'} · Topics: ${z.cats.map(c=>catLabel[c]).join(', ')}</div></div>
+        <div class="tag">${unlocked?(boss?'🏆':'✨'):'🔒'}</div>`;
+      if(unlocked){ it.style.cursor='pointer'; it.onclick=()=>{ Audio2.sfx.click(); close(); teleportTo(z.id); }; }
+      list.appendChild(it);
+    });
+    card.appendChild(list);
+    card.appendChild(el('p','muted small','Tap an unlocked zone to travel there instantly.'));
+  });
+}
+function teleportTo(zoneId){ const c=ZONE_POS[zoneId]; if(player){ player.position.set(c.x,0,c.z+8); } toast(`Traveled to ${zoneById(zoneId).name}`); }
+
+function openPractice(){
+  modal((card,close)=>{
+    card.appendChild(el('h2',null,'🧠 Math Practice'));
+    card.appendChild(el('p','sub','No pressure — practice any topic. Learn from every hint!'));
+    const g=el('div','grid g2');
+    Object.keys(catLabel).forEach(cat=>{ const b=el('button','btn ghost',catLabel[cat]);
+      b.onclick=()=>{ Audio2.sfx.click(); practiceLoop(cat); }; g.appendChild(b); });
+    card.appendChild(g);
+  });
+}
+function practiceLoop(cat){
+  askQuestion(cat,{title:'🧠 Practice · '+catLabel[cat],practice:true,onDone:(ok)=>{ if(ok){ toast('✅ Nice! Keep going'); setTimeout(()=>practiceLoop(cat),400);} }});
+}
+
+function openMiniGames(){
+  modal((card,close)=>{
+    card.appendChild(el('h2',null,'🎮 Mini-Games'));
+    card.appendChild(el('p','sub','Pick a game — uses your current zone topics.'));
+    const zoneChoice=el('select'); zoneChoice.style.cssText='width:100%;padding:12px;border-radius:12px;background:#10164a;color:#fff;border:1.5px solid #2b3576;margin-bottom:10px';
+    ZONES.filter(z=>P.unlocked[z.id]).forEach(z=>{ const o=el('option'); o.value=z.id; o.textContent=z.emoji+' '+z.name; zoneChoice.appendChild(o); });
+    card.appendChild(zoneChoice);
+    const g=el('div','grid');
+    const mk=(l,fn)=>{ const b=el('button','btn',l); b.onclick=()=>{Audio2.sfx.click();close();fn(zoneChoice.value);}; return b; };
+    g.append(
+      mk('⚔️ Math Battle',startBattle),
+      mk('🏎️ Math Race',startRace),
+      mk('💎 Treasure Question',(z)=>askQuestion(pick(zoneById(z).cats),{title:'💎 Treasure',onDone:ok=>{if(ok){const r=rint(15,35);addCoins(r);toast('+'+r+'🪙');}}})),
+      mk('👑 Boss Rush',(z)=>startBoss(z)),
+    );
+    card.appendChild(g);
+  });
+}
+
+/* ---- Character & Shop ---- */
+const SHOP=[
+  {id:'c0',type:'skin',name:'Aqua Hero',emoji:'🔵',cost:0},
+  {id:'c1',type:'skin',name:'Rose Runner',emoji:'🌸',cost:60},
+  {id:'c2',type:'skin',name:'Green Ranger',emoji:'🟢',cost:60},
+  {id:'c3',type:'skin',name:'Golden Star',emoji:'⭐',cost:150},
+  {id:'hat',type:'hat',name:'Wizard Hat',emoji:'🎩',cost:80},
+  {id:'pet',type:'pet',name:'Star Pet',emoji:'🐣',cost:120},
+];
+function openCharacter(){
+  modal((card,close)=>{
+    card.appendChild(el('h2',null,'🧑 Character & Shop'));
+    card.appendChild(el('p','sub',`🪙 ${P.coins} coins · Earn more by solving problems!`));
+    const list=el('div','grid g2');
+    SHOP.forEach(s=>{ const owned=P.owned[s.id]||s.cost===0; const equipped=P.equipped[s.type]===s.id || (s.type==='hat'&&P.equipped.hat===s.id)||(s.type==='pet'&&P.equipped.pet===s.id);
+      const it=el('div','listitem');
+      it.innerHTML=`<div><div style="font-weight:800">${s.emoji} ${s.name}</div><div class="small muted">${s.type} ${s.cost>0?'· '+s.cost+'🪙':'· Free'}</div></div>`;
+      const b=el('button','btn '+(equipped?'good':owned?'':'primary')); b.style.width='auto'; b.style.margin='0'; b.style.padding='10px 14px';
+      b.textContent= equipped?'Equipped ✓' : owned?'Equip' : 'Buy';
+      b.onclick=()=>{ Audio2.sfx.click();
+        if(!owned){ if(P.coins>=s.cost){ P.coins-=s.cost; P.owned[s.id]=true; Audio2.sfx.coin(); toast('Purchased '+s.name+'!'); } else { toast('Need more coins!'); Audio2.sfx.wrong(); return; } }
+        // equip
+        if(s.type==='skin') P.equipped.skin=s.id;
+        if(s.type==='hat') P.equipped.hat= P.equipped.hat===s.id?null:s.id;
+        if(s.type==='pet') P.equipped.pet= P.equipped.pet===s.id?null:s.id;
+        rebuildPlayer(); save(); updateHUD(); close(); openCharacter();
+      };
+      it.appendChild(b); list.appendChild(it);
+    });
+    card.appendChild(list);
+  });
+}
+
+function openAchievements(){
+  modal((card,close)=>{
+    card.appendChild(el('h2',null,'🏅 Achievements'));
+    const acc=P.totalSeen?Math.round(100*P.totalCorrect/P.totalSeen):0;
+    card.appendChild(el('p','sub',`Best streak 🔥${P.bestStreak} · Accuracy ${acc}% · ${P.totalCorrect} solved`));
+    const defs=[['first','First Steps','👣'],['sharp','Sharp Mind','🧠'],['genius','Math Genius','🎓'],['streak5','On Fire','🔥'],['streak10','Unstoppable','⚡'],['lv5','Rising Star','🌟'],['boss1','Boss Slayer','⚔️'],['bossAll','World Champion','👑'],['explorer','Grand Explorer','🗺️']];
+    const g=el('div','grid'); g.style.gridTemplateColumns='repeat(3,1fr)';
+    defs.forEach(([id,name,em])=>{ const got=P.badges[id]; const b=el('div','badgeitem'+(got?'':' locked'));
+      b.innerHTML=`<div class="em">${got?em:'🔒'}</div><div>${name}</div>`; g.appendChild(b); });
+    card.appendChild(g);
+  });
+}
+
+/* ---- Daily Challenge ---- */
+function todayStr(){ const d=new Date(); return d.getFullYear()+'-'+(d.getMonth()+1)+'-'+d.getDate(); }
+function openDaily(){
+  const today=todayStr();
+  if(P.daily.date!==today){ P.daily={date:today,index:0,correct:0,bestScore:P.daily.bestScore||0,streak:0,done:false}; save(); }
+  if(P.daily.done){ modal((card,close)=>{ card.appendChild(el('h2',null,'📅 Daily Challenge')); card.appendChild(el('p','sub','You finished today! 🎉'));
+    card.appendChild(el('div','tag',`Best score: ${P.daily.bestScore}/10`)); card.appendChild(el('p','muted small','Come back tomorrow for a new set!')); }); return; }
+  runDaily();
+}
+function runDaily(){
+  const total=10; const allCats=ZONES.flatMap(z=>z.cats);
+  const i=P.daily.index;
+  if(i>=total){ P.daily.done=true; P.daily.bestScore=Math.max(P.daily.bestScore,P.daily.correct);
+    const xp=P.daily.correct*15+30; addXP(xp); addCoins(P.daily.correct*8); if(P.daily.correct>=8)addStars(2);
+    save();
+    modal((card,close)=>{ card.appendChild(el('h2',null,'📅 Daily Complete!'));
+      card.appendChild(el('div','tag',`Score: ${P.daily.correct}/${total}`));
+      const acc=Math.round(100*P.daily.correct/total);
+      card.appendChild(el('p','sub',`Accuracy ${acc}% · Best streak 🔥${P.daily.streak} · +${xp}XP`));
+      card.appendChild(el('p','muted small',`Personal best: ${P.daily.bestScore}/${total}`));
+      Audio2.sfx.win(); flash();
+    }); return; }
+  // difficulty ramps with index
+  const cat=allCats[(i*3+P.daily.correct)%allCats.length];
+  const prev=P.adaptive[cat]; P.adaptive[cat]=Math.min(10,(P.adaptive[cat]??2)+i*0.5);
+  askQuestion(cat,{title:`📅 Daily · ${i+1}/${total}`, practice:false, onDone:(ok)=>{ P.adaptive[cat]=prev;
+    P.daily.index++; if(ok){ P.daily.correct++; P.daily.streak=Math.max(P.daily.streak,streak);} save(); setTimeout(runDaily,300);
+  }});
+  // restore adaptive next tick handled in onDone
+}
+
+/* ---- Parent / Teacher ---- */
+function openParentGate(){
+  modal((card,close)=>{
+    card.appendChild(el('h2',null,'👪 Parent / Teacher Area'));
+    card.appendChild(el('p','sub','Enter PIN to view progress'));
+    const pin=el('input','pin'); pin.type='password'; pin.inputMode='numeric'; pin.maxLength=4; pin.value=''; card.appendChild(pin);
+    const kp=el('div','keypad');
+    ['1','2','3','4','5','6','7','8','9','⌫','0','OK'].forEach(k=>{ const b=el('button',null,k);
+      b.onclick=()=>{ Audio2.sfx.click(); if(k==='⌫')pin.value=pin.value.slice(0,-1); else if(k==='OK'){ if(pin.value===P.parentPin){ close(); openParentDash(); } else { toast('Wrong PIN'); Audio2.sfx.wrong(); pin.value=''; } } else if(pin.value.length<4) pin.value+=k; };
+      kp.appendChild(b); });
+    card.appendChild(kp);
+    card.appendChild(el('p','muted small','Default PIN is 1234 (change in Settings).'));
+  });
+}
+function openParentDash(){
+  modal((card,close)=>{
+    card.appendChild(el('h2',null,'📊 Progress Dashboard'));
+    const acc=P.totalSeen?Math.round(100*P.totalCorrect/P.totalSeen):0;
+    card.appendChild(el('p','sub',`Level ${P.level} · ${P.totalCorrect}/${P.totalSeen} correct · ${acc}% accuracy`));
+    // per category
+    const cats=Object.keys(P.stats);
+    const rows=cats.map(c=>{ const s=P.stats[c]; return {c, acc:s.seen?s.correct/s.seen:0, seen:s.seen, avg:s.seen?Math.round(s.timeMs/s.seen/100)/10:0}; }).sort((a,b)=>a.acc-b.acc);
+    if(rows.length){
+      const strong=[...rows].sort((a,b)=>b.acc-a.acc).slice(0,3).map(r=>catLabel[r.c]).join(', ');
+      const weak=rows.slice(0,3).map(r=>catLabel[r.c]).join(', ');
+      card.appendChild(el('div','listitem',`<div><b>💪 Strongest:</b> ${strong||'—'}</div>`));
+      card.appendChild(el('div','listitem',`<div><b>📚 Needs practice:</b> ${weak||'—'}</div>`));
+    }
+    const list=el('div','list');
+    rows.forEach(r=>{ const it=el('div','listitem');
+      it.innerHTML=`<div style="min-width:120px"><b>${catLabel[r.c]}</b><div class="small muted">${r.seen} answered · ~${r.avg}s avg</div></div>
+        <div class="barfill-sm"><div style="width:${Math.round(r.acc*100)}%"></div></div><div style="width:44px;text-align:right">${Math.round(r.acc*100)}%</div>`;
+      list.appendChild(it);
+    });
+    card.appendChild(list.children.length?list:el('p','muted','No data yet — play a bit first!'));
+    // recent mistakes
+    if(P.recentMistakes.length){ card.appendChild(el('h2',null,'Recent Mistakes').cloneNode(true)); const ml=el('div','list');
+      P.recentMistakes.slice(0,6).forEach(m=>{ ml.appendChild(el('div','listitem',`<div class="small">${m.q}</div><div class="tag small">ans ${m.ans}</div>`)); });
+      card.appendChild(el('div','small muted','Recent mistakes:')); card.appendChild(ml); }
+  });
+}
+
+/* ---- Settings ---- */
+function openSettings(){
+  modal((card,close)=>{
+    card.appendChild(el('h2',null,'⚙️ Settings'));
+    const mk=(label,key,onChange)=>{ const t=el('div','toggle'); const sw=el('div','switch'+(P.settings[key]?' on':''),'<b></b>');
+      t.append(el('div',null,label),sw); sw.onclick=()=>{ P.settings[key]=!P.settings[key]; sw.classList.toggle('on'); Audio2.sfx.click(); onChange&&onChange(); save(); }; return t; };
+    const g=el('div','grid');
+    g.append(
+      mk('🎵 Music','music',()=>Audio2.refresh()),
+      mk('🔊 Sound Effects','sfx'),
+      mk('🗣️ Voice Read-Aloud','voice'),
+      mk('🌗 High Contrast','highContrast',applyAccessibility),
+    );
+    card.appendChild(g);
+    // text size
+    const ts=el('div','toggle'); ts.style.flexDirection='column'; ts.style.alignItems='stretch';
+    ts.appendChild(el('div',null,'🔠 Text Size'));
+    const rng=el('input'); rng.type='range'; rng.min='0.85'; rng.max='1.4'; rng.step='0.05'; rng.value=P.settings.textScale;
+    rng.oninput=()=>{ P.settings.textScale=+rng.value; applyAccessibility(); save(); };
+    ts.appendChild(rng); card.appendChild(ts);
+    // difficulty tier
+    const dt=el('div','toggle'); dt.style.flexDirection='column'; dt.style.alignItems='stretch';
+    dt.appendChild(el('div',null,'🎯 Difficulty Level'));
+    const drow=el('div','grid g3'); [['1','Explorer'],['2','Challenger'],['3','Master']].forEach(([v,n])=>{ const b=el('button','btn '+(P.difficultyTier==+v?'primary':'ghost'),n);
+      b.onclick=()=>{ P.difficultyTier=+v; Audio2.sfx.click(); save(); close(); openSettings(); }; drow.appendChild(b); });
+    dt.appendChild(drow); dt.appendChild(el('div','small muted','Questions still adapt to how you do.')); card.appendChild(dt);
+    // change PIN
+    const pinBtn=el('button','btn ghost','🔐 Change Parent PIN'); pinBtn.onclick=()=>{ const np=prompt('New 4-digit PIN:',P.parentPin); if(np&&/^\d{4}$/.test(np)){P.parentPin=np;save();toast('PIN updated');} }; card.appendChild(pinBtn);
+    // reset
+    const rs=el('button','btn ghost','🗑️ Reset All Progress'); rs.style.borderColor='#6b1e26'; rs.onclick=()=>{ if(confirm('Erase all progress and start over?')){ localStorage.removeItem(SAVE_KEY); location.reload(); } }; card.appendChild(rs);
+  });
+}
+
+/* ============================ Keyboard =============================== */
+addEventListener('keydown',e=>{ const k=e.key.toLowerCase(); keys[k]=true;
+  if(k==='e'&&!modalOpen){ interact(); }
+  if(k==='escape'){ const s=app.querySelector('.screen:not(#loading)'); if(s){ closeModal(s);} else openMenu(); }
+  if(k==='m'&&!modalOpen) openMenu();
+});
+addEventListener('keyup',e=>{ keys[e.key.toLowerCase()]=false; });
+// resume audio on first interaction
+['pointerdown','keydown','touchstart'].forEach(ev=>addEventListener(ev,()=>{Audio2.resume(); if(P.settings.music)Audio2.startMusic();},{once:true}));
+
+/* ============================ Boot / Start ========================== */
+function startGame(){
+  $('#loading')?.remove();
+  applyAccessibility();
+  buildHUD();
+  init3D();
+  Audio2.refresh();
+  updateStreakHUD();
+  toast('Welcome! Walk to a ✨ crystal and press '+(isTouch?'ACT':'E'));
+  checkAchievements();
+  save();
+}
+
+/* ---- Title / Character select ---- */
+const CHARS=[['🦊','Fox'],['🐼','Panda'],['🐸','Frog'],['🦄','Unicorn']];
+function titleScreen(){
+  $('#loading')?.remove();
+  applyAccessibility();
+  const scr=el('div','screen');
+  const card=el('div','card');
+  card.appendChild(el('h1',null,'Math Quest'));
+  card.appendChild(el('p','sub','A 3D math adventure. Explore, battle, and become a Math Champion!'));
+  const nameIn=el('input','pin'); nameIn.style.letterSpacing='normal'; nameIn.style.fontSize='1.2rem'; nameIn.type='text'; nameIn.placeholder='Your name'; nameIn.maxLength=12; nameIn.value=P.name==='Explorer'?'':P.name;
+  card.appendChild(el('div','small muted','Choose your hero:'));
+  const row=el('div','charrow');
+  CHARS.forEach(([em,nm],i)=>{ const o=el('div','charopt'+(P.char===i?' sel':''),`<div class="charface">${em}</div><div class="small">${nm}</div>`);
+    o.onclick=()=>{ P.char=i; Audio2.sfx.click(); row.querySelectorAll('.charopt').forEach(x=>x.classList.remove('sel')); o.classList.add('sel'); }; row.appendChild(o); });
+  card.appendChild(row);
+  card.appendChild(el('div','small muted','Your name:')); card.appendChild(nameIn);
+  const diff=el('div','grid g3'); diff.style.marginTop='10px';
+  [['1','Explorer','Ages 8-10'],['2','Challenger','Harder'],['3','Master','Expert']].forEach(([v,n,d])=>{ const b=el('button','btn '+(P.difficultyTier==+v?'primary':'ghost'),`${n}<br><span class="small muted">${d}</span>`);
+    b.onclick=()=>{ P.difficultyTier=+v; diff.querySelectorAll('.btn').forEach(x=>x.classList.replace('primary','ghost')); b.classList.replace('ghost','primary'); Audio2.sfx.click(); }; diff.appendChild(b); });
+  card.appendChild(el('div','small muted','Difficulty:')); card.appendChild(diff);
+  const play=el('button','btn primary','▶ Start Adventure'); play.style.marginTop='14px';
+  play.onclick=()=>{ Audio2.resume(); if(P.settings.music)Audio2.startMusic(); P.name=nameIn.value.trim()||CHARS[P.char][1]+' Hero'; save(); scr.remove(); startGame(); };
+  card.appendChild(play);
+  const cont=el('button','btn ghost', (P.totalSeen>0?'↩ Continue saved game':'')); if(P.totalSeen>0){ cont.onclick=()=>{ scr.remove(); startGame(); }; card.appendChild(cont);}
+  card.appendChild(el('p','muted small','Controls: WASD/Arrows or joystick to move · E or ACT to interact · M for menu'));
+  scr.appendChild(card); app.appendChild(scr);
+}
+
+titleScreen();
+
+// expose a few for debugging / automated QA
+window.MQ={P,save,startBoss,addStars};
+if(window.__MQTEST){ window.MQ.makeQuestion=makeQuestion; window.MQ.cats=Object.keys(catLabel); window.MQ.Gen=Gen;
+  window.MQ.worldObjects=worldObjects; window.MQ.tryUnlock=tryUnlock; }
+</script>
+
+<!-- Fallback if Three.js (CDN) failed to load -->
+<script>
+setTimeout(function(){
+  var lm=document.getElementById('loadmsg');
+  if(!window.__mqLoaded && lm){
+    lm.innerHTML =
+      "Couldn't load the 3D engine from the internet.<br><br>Math Quest needs a one-time internet connection to fetch Three.js, or run it from a local server. See the README for offline options.<br><br><span style='color:#a8b2e0'>Tip: connect to the internet and refresh.</span>";
+  }
+},4000);
+</script>
+</body>
+</html>
