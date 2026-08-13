@@ -2,31 +2,62 @@
 @tailwind components;
 @tailwind utilities;
 
-html, body, #root {
-  margin: 0;
-  padding: 0;
-  background-color: #0A1628;
-  min-height: 100vh;
-  min-height: 100dvh;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-  text-size-adjust: 100%;
-  -webkit-text-size-adjust: 100%;
+/* ------------------------------------------------------------------ */
+/*  Theme tokens — light is the default :root; .dark overrides.        */
+/* ------------------------------------------------------------------ */
+:root {
+  --term-bg: 246 248 251;
+  --term-panel: 255 255 255;
+  --term-panel2: 241 245 249;
+  --term-border: 214 222 232;
+  --term-text: 15 23 42;
+  --term-muted: 71 85 105;
+  --term-faint: 120 134 153;
+  --term-accent: 37 99 235;
+  --term-good: 5 150 105;
+  --term-warn: 180 120 4;
+  --term-bad: 220 38 38;
+  color-scheme: light;
 }
 
-/* Prevent ugly iOS tap flash */
-* { -webkit-tap-highlight-color: transparent; }
-
-/* Number inputs: hide spinners (cleaner mobile UX) */
-input[type=number]::-webkit-inner-spin-button,
-input[type=number]::-webkit-outer-spin-button {
-  -webkit-appearance: none;
-  margin: 0;
+.dark {
+  --term-bg: 7 9 13;
+  --term-panel: 14 18 25;
+  --term-panel2: 20 26 35;
+  --term-border: 33 42 54;
+  --term-text: 226 232 240;
+  --term-muted: 148 163 184;
+  --term-faint: 100 116 139;
+  --term-accent: 94 179 255;
+  --term-good: 45 212 167;
+  --term-warn: 245 179 1;
+  --term-bad: 248 113 113;
+  color-scheme: dark;
 }
-input[type=number] { -moz-appearance: textfield; }
 
-/* Safe-area for iPhone notch / home indicator */
+html, body, #root { height: 100%; }
 body {
-  padding-top: env(safe-area-inset-top);
-  padding-bottom: env(safe-area-inset-bottom);
+  margin: 0;
+  background: rgb(var(--term-bg));
+  color: rgb(var(--term-text));
+  font-family: Inter, system-ui, ui-sans-serif, sans-serif;
+  -webkit-font-smoothing: antialiased;
 }
+
+/* Tabular figures for live-updating numbers so digits don't jitter. */
+.tnum { font-variant-numeric: tabular-nums; font-feature-settings: "tnum"; }
+
+/* Thin scrollbars in panels */
+.scroll-thin::-webkit-scrollbar { width: 8px; height: 8px; }
+.scroll-thin::-webkit-scrollbar-thumb { background: rgb(var(--term-border)); border-radius: 4px; }
+.scroll-thin::-webkit-scrollbar-track { background: transparent; }
+
+/* Subtle live pulse for the reporting indicator */
+@keyframes livepulse { 0%,100% { opacity: 1; } 50% { opacity: .35; } }
+.live-dot { animation: livepulse 1.6s ease-in-out infinite; }
+
+/* Number roll transition */
+.num-roll { transition: color .3s ease; }
+
+/* Focusable rows */
+.row-hover:hover { background: rgb(var(--term-panel2)); }

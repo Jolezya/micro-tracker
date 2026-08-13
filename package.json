@@ -1,9 +1,9 @@
 {
-  "name": "micro-tracker",
+  "name": "zambia-election-terminal",
   "private": true,
   "version": "1.0.0",
   "type": "module",
-  "description": "Micro Tracker — premium fitness & nutrition tracking by Peter",
+  "description": "Zambia Presidential Election 2026 — Prediction & Live Results Analysis Terminal (DEMO DATA)",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
