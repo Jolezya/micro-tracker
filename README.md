@@ -21,7 +21,8 @@ from a single codebase. Add it to your home screen and it behaves like a native 
   fluid Framer Motion transitions, micro-interactions, skeleton loading, pull-to-refresh, swipeable
   galleries with **pinch-to-zoom**, and full **light / dark mode**.
 - **Every screen implemented & working** — Home, Search, Listing detail, Seller profiles, real-time
-  style Messaging, a 3-step Sell flow, Notifications, Subscription plans, an Admin dashboard, and Auth.
+  style Messaging, a guided 4-step Sell flow (plan → photos → details → review), Notifications,
+  Subscription plans, an Admin dashboard, and Auth.
 - **Smart features (on-device AI heuristics)** — auto category detection, title & description
   generation, price suggestions from comparable listings, duplicate detection, fraud / trust scoring,
   and smart recommendations. All transparent, deterministic and unit-tested.
