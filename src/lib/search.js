@@ -1,4 +1,4 @@
-import { distanceKm } from './format.js';
+import { distanceKm, kwachaCompact } from './format.js';
 
 // Pure, testable search + filter + sort over listings.
 
@@ -22,7 +22,7 @@ export const DEFAULT_FILTERS = {
   negotiableOnly: false,
 };
 
-function matchesText(listing, q) {
+export function matchesText(listing, q) {
   if (!q) return true;
   const hay = [
     listing.title,
@@ -111,4 +111,132 @@ export function countActiveFilters(filters = {}) {
   if (f.maxDistance != null) n++;
   if (f.negotiableOnly) n++;
   return n;
+}
+
+// ============================================================
+// Schema-driven, category-aware filtering engine.
+// Values shape (per filter key):
+//   chips/select : string[]                       (selected options)
+//   price/range  : { min:number|null, max:number|null }
+//   toggle       : boolean
+//   location     : { province, town, nearMe, radius }
+// ============================================================
+
+const NEAR_ME_RADIUS = 25; // km
+
+// Read a filter's field from a listing (top-level, then attrs).
+export function getField(listing, field) {
+  if (!listing) return undefined;
+  if (field in listing) return listing[field];
+  if (listing.attrs && field in listing.attrs) return listing.attrs[field];
+  return undefined;
+}
+
+export function isFilterActive(def, value) {
+  if (value == null) return false;
+  switch (def.type) {
+    case 'chips':
+    case 'select':
+      return Array.isArray(value) && value.length > 0;
+    case 'price':
+    case 'range':
+      return value.min != null || value.max != null;
+    case 'toggle':
+      return value === true;
+    case 'location':
+      return !!(value.province || value.town || value.nearMe);
+    default:
+      return false;
+  }
+}
+
+export function matchFilter(listing, def, value, origin = null) {
+  if (!isFilterActive(def, value)) return true;
+  const field = def.field || def.key;
+
+  switch (def.type) {
+    case 'chips':
+    case 'select': {
+      const lv = getField(listing, field);
+      if (Array.isArray(lv)) return value.some((v) => lv.includes(v));
+      return lv != null && value.includes(lv);
+    }
+    case 'price':
+    case 'range': {
+      const n = Number(getField(listing, field));
+      if (Number.isNaN(n)) return false;
+      if (value.min != null && n < value.min) return false;
+      if (value.max != null && n > value.max) return false;
+      return true;
+    }
+    case 'toggle':
+      return !!getField(listing, field);
+    case 'location': {
+      const loc = listing.location;
+      if (!loc) return false;
+      if (value.province && loc.province !== value.province) return false;
+      if (value.town && loc.city !== value.town) return false;
+      if (value.nearMe && origin) {
+        const d = distanceKm(origin, loc);
+        if (d == null || d > (value.radius || NEAR_ME_RADIUS)) return false;
+      }
+      return true;
+    }
+    default:
+      return true;
+  }
+}
+
+// Filter a list against a schema's values. `skipKey` lets the UI compute the
+// available result count for one facet while ignoring that facet's own value.
+export function filterBySchema(listings, schema, values = {}, origin = null, skipKey = null) {
+  if (!schema) return listings;
+  return listings.filter((l) =>
+    schema.filters.every((def) => (def.key === skipKey ? true : matchFilter(l, def, values[def.key], origin)))
+  );
+}
+
+export function countBySchema(listings, schema, values, origin) {
+  return filterBySchema(listings, schema, values, origin).length;
+}
+
+export function countActiveSchema(schema, values = {}) {
+  if (!schema) return 0;
+  return schema.filters.reduce((n, def) => n + (isFilterActive(def, values[def.key]) ? 1 : 0), 0);
+}
+
+// A short human label for an active filter value (for the removable chip row).
+export function formatFilterValue(def, value) {
+  switch (def.type) {
+    case 'chips':
+    case 'select':
+      return value.length <= 2 ? value.join(', ') : `${value[0]} +${value.length - 1}`;
+    case 'price':
+    case 'range': {
+      const u = def.unit === 'K' ? '' : def.unit || '';
+      const fmt = def.unit === 'K' ? (n) => kwachaCompact(n) : (n) => `${n}${u}`;
+      if (value.min != null && value.max != null) return `${fmt(value.min)}–${fmt(value.max)}`;
+      if (value.min != null) return `From ${fmt(value.min)}`;
+      return `Up to ${fmt(value.max)}`;
+    }
+    case 'toggle':
+      return def.label;
+    case 'location': {
+      const parts = [];
+      if (value.town) parts.push(value.town);
+      else if (value.province) parts.push(value.province);
+      if (value.nearMe) parts.push('Near me');
+      return parts.join(' · ') || 'Location';
+    }
+    default:
+      return '';
+  }
+}
+
+// List of active filters as {def, value, text} for the chip row.
+export function activeFilterList(schema, values = {}) {
+  if (!schema) return [];
+  return schema.filters
+    .filter((def) => isFilterActive(def, values[def.key]))
+    .map((def) => ({ def, value: values[def.key], text: formatFilterValue(def, values[def.key]) }));
 }

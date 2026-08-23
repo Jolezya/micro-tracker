@@ -1,6 +1,11 @@
 // Realistic sample listings across every Kaira category — localised for Zambia.
 // Prices are in Zambian Kwacha (ZMW). `photoCount` drives the generative gallery.
 // Timestamps are relative to the demo "now" (2026-08-05).
+//
+// Each listing is enriched with a structured `attrs` object (see the bottom of
+// this file) that the category-aware filter framework matches against.
+
+import { USER_MAP } from './users.js';
 
 const H = 3600 * 1000;
 const D = 24 * H;
@@ -24,7 +29,7 @@ const loc = (key, area, dlat = 0, dlng = 0) => ({
   lng: CITY[key].lng + dlng,
 });
 
-export const LISTINGS = [
+const RAW_LISTINGS = [
   // ---------------- Vehicles ----------------
   {
     id: 'l_tesla_y',
@@ -815,7 +820,114 @@ export const LISTINGS = [
       'Reliable moving service across the Copperbelt (Kitwe, Ndola, Chingola). Two experienced movers, a large truck and all equipment included. We also assemble flat-pack furniture. Message for a fast quote.',
     specs: { Team: '2 movers', Vehicle: 'Large truck', Insured: 'Yes', Area: 'Copperbelt' },
   },
+
+  // ---------------- Land / Plots ----------------
+  {
+    id: 'l_plot_lusaka',
+    title: 'Residential plot with title deed — Silverest',
+    category: 'property',
+    subcategory: 'Plots',
+    price: 850000,
+    negotiable: true,
+    condition: null,
+    brand: null,
+    location: loc('lusaka', 'Silverest', 0.02, 0.18),
+    sellerId: 'u_fjord_homes',
+    postedAt: ago(11 * H),
+    photoCount: 4,
+    premium: true,
+    sponsored: false,
+    views: 1980,
+    saves: 176,
+    tags: ['Title deed', 'Serviced', 'Walled'],
+    description:
+      'A prime 2,000 m² residential stand in the fast-growing Silverest area off the Great East Road. Title deed in hand, serviced with tarred road access, ZESCO electricity and borehole water on site. Ready to build.',
+    specs: { Size: '2,000 m²', Use: 'Residential', 'Title deed': 'Yes', Serviced: 'Yes' },
+  },
+  {
+    id: 'l_plot_farm',
+    title: 'Agricultural farm land — 20 hectares',
+    category: 'property',
+    subcategory: 'Plots',
+    price: 4200000,
+    negotiable: true,
+    condition: null,
+    brand: null,
+    location: loc('kabwe', 'Chibombo Rd', -0.15, 0.1),
+    sellerId: 'u_fjord_homes',
+    postedAt: ago(3 * D + 6 * H),
+    photoCount: 4,
+    premium: false,
+    sponsored: false,
+    views: 640,
+    saves: 58,
+    tags: ['20 hectares', 'Title deed', 'Water'],
+    description:
+      'Fertile 20-hectare farm block on the Chibombo road, ideal for crops or livestock. Title deed available, good gravel road access and a perennial stream. Unserviced for power — solar recommended.',
+    specs: { Size: '20 ha', Use: 'Agricultural', 'Title deed': 'Yes', 'Road access': 'Yes' },
+  },
 ];
+
+// ============================================================
+// Structured attributes for the category-aware filter framework.
+// Non-derivable facets are hand-set per listing here; the rest (sellerType,
+// year, mileage, saleCondition, listingType) are derived below.
+// ============================================================
+const ATTR_OVERRIDES = {
+  // vehicles
+  l_tesla_y: { vehicleType: 'SUV', fuel: 'Electric', transmission: 'Automatic', bodyType: 'SUV', model: 'Model Y' },
+  l_bmw_m3: { vehicleType: 'Car', fuel: 'Petrol', transmission: 'Automatic', bodyType: 'Sedan', model: '3 Series' },
+  l_audi_rs6: { vehicleType: 'Car', fuel: 'Petrol', transmission: 'Automatic', bodyType: 'Wagon', model: 'RS6' },
+  l_landcruiser: { vehicleType: 'SUV', fuel: 'Diesel', transmission: 'Automatic', bodyType: 'SUV', model: 'Land Cruiser' },
+  // motorcycles
+  l_ktm: { model: '890 Adventure R' },
+  // property
+  l_apartment: { propertyType: 'Apartment', listingKind: 'For Sale', bedrooms: 3, bathrooms: 2, buildingSize: 165, furnished: false, parking: true, security: true, pool: false, garden: false },
+  l_villa: { propertyType: 'House', listingKind: 'For Sale', bedrooms: 5, bathrooms: 5, buildingSize: 620, furnished: false, parking: true, security: true, pool: true, garden: true },
+  l_cabin: { propertyType: 'Cabin', listingKind: 'For Sale', bedrooms: 3, bathrooms: 2, buildingSize: 210, furnished: true, parking: true, security: false, pool: false, garden: true },
+  l_office: { propertyType: 'Office', listingKind: 'For Rent', buildingSize: 180, furnished: false, parking: true, security: true, pool: false, garden: false },
+  // land
+  l_plot_lusaka: { landUse: 'Residential', plotSize: 2000, titleDeed: true, serviced: true, roadAccess: true, electricity: true, water: true },
+  l_plot_farm: { landUse: 'Agricultural', plotSize: 200000, titleDeed: true, serviced: false, roadAccess: true, electricity: false, water: true },
+  // electronics
+  l_iphone: { warranty: false },
+  l_macbook: { warranty: true },
+  l_samsung_tv: { warranty: false },
+  l_ps5: { warranty: true },
+  // jobs
+  l_job: { jobCategory: 'IT & Software', jobType: 'Full-time', workMode: 'Hybrid', experience: 'Senior', education: 'Degree', industry: 'Technology', salary: 32000 },
+};
+
+// Seller type from the seller's profile.
+function sellerTypeOf(sellerId) {
+  const u = USER_MAP[sellerId];
+  if (!u || !u.business) return 'Private seller';
+  return u.plan === 'enterprise' ? 'Dealer' : 'Business';
+}
+
+function deriveAttrs(l) {
+  const year = Number(String(l.specs?.Year || '').replace(/\D/g, '')) || undefined;
+  const mileage = Number(String(l.specs?.Mileage || '').replace(/[^\d]/g, '')) || undefined;
+  const saleCondition =
+    l.condition == null ? undefined : l.condition === 'New' ? 'New' : 'Used';
+  const listingType = l.negotiable ? 'Negotiable' : 'For Sale';
+  // property agents/developers read as their business flavour
+  let sellerType = sellerTypeOf(l.sellerId);
+  if (l.category === 'property') sellerType = USER_MAP[l.sellerId]?.business ? 'Agent' : 'Private seller';
+  const hoursOld = (Date.parse('2026-08-05T09:00:00Z') - Date.parse(l.postedAt)) / 3600000;
+  const postedWithin = hoursOld <= 24 ? 'Last 24 hours' : hoursOld <= 168 ? 'Last 7 days' : 'Last 30 days';
+  return {
+    year,
+    mileage,
+    saleCondition,
+    listingType,
+    sellerType,
+    postedWithin,
+    ...(ATTR_OVERRIDES[l.id] || {}),
+  };
+}
+
+export const LISTINGS = RAW_LISTINGS.map((l) => ({ ...l, attrs: deriveAttrs(l) }));
 
 export const LISTING_MAP = Object.fromEntries(LISTINGS.map((l) => [l.id, l]));
 

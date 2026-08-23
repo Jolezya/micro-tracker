@@ -1,30 +1,32 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
-import { AnimatePresence, motion } from 'framer-motion';
 import {
   Search as SearchIcon, SlidersHorizontal, ArrowUpDown, X, Map, LayoutGrid,
-  Rows3, Bookmark, Check, MapPin,
+  Rows3, Bookmark, Check, ChevronRight,
 } from 'lucide-react';
 import { Container } from '../components/layout/Header.jsx';
 import { ListingCard, ListingRow, ListingCardSkeleton } from '../components/ListingCard.jsx';
 import { MapView } from '../components/MapView.jsx';
 import { CategoryIcon } from '../components/CategoryIcon.jsx';
 import { Sheet } from '../components/ui/Sheet.jsx';
-import { Button, Chip, Badge, EmptyState, Segmented } from '../components/ui/kit.jsx';
+import { Button, Chip, EmptyState, Segmented } from '../components/ui/kit.jsx';
+import { FilterControl } from '../components/filters/FilterControls.jsx';
 import { useToast } from '../components/ui/Toast.jsx';
-import { CATEGORIES, CATEGORY_MAP, CONDITIONS } from '../data/categories.js';
+import { CATEGORIES, CATEGORY_MAP } from '../data/categories.js';
 import { CURRENT_USER } from '../data/users.js';
+import { schemaFor, quickFilters, hydrateSchema, resolveOptions } from '../data/filterSchema.js';
 import { useAllListings, useStore } from '../lib/store.jsx';
 import {
-  filterListings, sortListings, SORTS, DEFAULT_FILTERS, countActiveFilters,
+  matchesText, filterBySchema, sortListings, SORTS,
+  countActiveSchema, activeFilterList, isFilterActive, formatFilterValue, getField,
 } from '../lib/search.js';
-import { kr } from '../lib/format.js';
 
 const VIEW_OPTIONS = [
   { value: 'grid', label: 'Grid', icon: <LayoutGrid size={15} /> },
   { value: 'list', label: 'List', icon: <Rows3 size={15} /> },
   { value: 'map', label: 'Map', icon: <Map size={15} /> },
 ];
+const ORIGIN = CURRENT_USER;
 
 export default function Search() {
   const { categoryId } = useParams();
@@ -34,97 +36,107 @@ export default function Search() {
   const { state, dispatch } = useStore();
   const { toast } = useToast();
 
-  const [filters, setFilters] = useState({
-    ...DEFAULT_FILTERS,
-    category: categoryId || null,
-    q: params.get('q') || '',
-  });
-  const [sort, setSort] = useState('relevant');
-  const [view, setView] = useState('grid');
+  const search = state.search;
+  const catKey = categoryId || 'all';
+  const activeCat = categoryId ? CATEGORY_MAP[categoryId] : null;
+
+  const [sub, setSub] = useState(null);
   const [loading, setLoading] = useState(true);
   const [showFilters, setShowFilters] = useState(false);
+  const [quickKey, setQuickKey] = useState(null); // open a single quick filter
   const [showSort, setShowSort] = useState(false);
-  const inputRef = useRef(null);
 
-  // React to category route changes
-  useEffect(() => {
-    setFilters((f) => ({ ...f, category: categoryId || null, sub: null }));
-  }, [categoryId]);
+  // committed filter values for this category
+  const values = search.filters[catKey] || {};
 
-  // Simulate a snappy load whenever inputs change (skeletons → premium feel)
+  // one-time seed of the query from ?q=
   useEffect(() => {
-    setLoading(true);
-    const t = setTimeout(() => setLoading(false), 260);
-    return () => clearTimeout(t);
-  }, [filters, sort]);
+    const q = params.get('q');
+    if (q && q !== search.q) dispatch({ type: 'PATCH_SEARCH', patch: { q } });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => setSub(null), [categoryId]);
+
+  // Base listings = category + subcategory + text query (schema filters applied after)
+  const base = useMemo(() => {
+    return all.filter((l) => {
+      if (categoryId && l.category !== categoryId) return false;
+      if (sub && l.subcategory !== sub) return false;
+      if (!matchesText(l, search.q)) return false;
+      return true;
+    });
+  }, [all, categoryId, sub, search.q]);
+
+  const schema = useMemo(() => hydrateSchema(schemaFor(categoryId, sub), base), [categoryId, sub, base]);
 
   const results = useMemo(() => {
-    const filtered = filterListings(all, filters, CURRENT_USER);
-    return sortListings(filtered, sort, CURRENT_USER, filters.q);
-  }, [all, filters, sort]);
+    const filtered = filterBySchema(base, schema, values, ORIGIN);
+    return sortListings(filtered, search.sort, ORIGIN, search.q);
+  }, [base, schema, values, search.sort, search.q]);
 
-  const activeCat = filters.category ? CATEGORY_MAP[filters.category] : null;
-  const activeFilterCount = countActiveFilters(filters);
+  useEffect(() => {
+    setLoading(true);
+    const t = setTimeout(() => setLoading(false), 240);
+    return () => clearTimeout(t);
+  }, [values, search.sort, search.q, categoryId, sub]);
 
-  const update = (patch) => setFilters((f) => ({ ...f, ...patch }));
-  const clearAll = () => update({ ...DEFAULT_FILTERS, q: filters.q });
+  const activeCount = countActiveSchema(schema, values);
+  const activeList = activeFilterList(schema, values);
+  const quicks = quickFilters(schema);
+
+  const commit = (next) => dispatch({ type: 'SET_CATEGORY_FILTERS', category: catKey, values: next });
+  const setValue = (key, v) => commit({ ...values, [key]: v });
+  const removeFilter = (key) => {
+    const next = { ...values };
+    delete next[key];
+    commit(next);
+  };
+  const clearAll = () => commit({});
+
+  const setSearchQ = (q) => dispatch({ type: 'PATCH_SEARCH', patch: { q } });
+  const setSort = (sort) => dispatch({ type: 'PATCH_SEARCH', patch: { sort } });
+  const setView = (view) => dispatch({ type: 'PATCH_SEARCH', patch: { view } });
 
   const saveSearch = () => {
-    const label =
-      (filters.q || activeCat?.label || 'All listings') +
-      (filters.category && filters.q ? ` in ${activeCat?.label}` : '');
-    dispatch({ type: 'SAVE_SEARCH', search: { label, filters, sort } });
-    toast('Search saved — we\'ll alert you on new matches');
+    const label = (search.q || activeCat?.label || 'All listings') + (activeCount ? ` · ${activeCount} filters` : '');
+    dispatch({ type: 'SAVE_SEARCH', search: { label, category: catKey } });
+    toast("Search saved — we'll alert you on new matches");
   };
+
+  const quickDef = quicks.find((q) => q.key === quickKey);
 
   return (
     <div>
-      {/* Header with search field */}
+      {/* Header */}
       <div className="glass sticky top-0 z-30 safe-top">
         <Container className="py-2.5">
           <div className="flex items-center gap-2">
             <div className="relative flex-1">
               <SearchIcon size={18} className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-faint" />
               <input
-                ref={inputRef}
-                value={filters.q}
-                onChange={(e) => update({ q: e.target.value })}
+                value={search.q}
+                onChange={(e) => setSearchQ(e.target.value)}
                 placeholder="Search Kaira…"
                 className="focus-ring h-11 w-full rounded-2xl border border-hairline bg-surface pl-10 pr-9 text-[15px] text-ink placeholder:text-faint"
               />
-              {filters.q && (
-                <button
-                  onClick={() => update({ q: '' })}
-                  className="absolute right-2 top-1/2 grid h-7 w-7 -translate-y-1/2 place-items-center rounded-full bg-ink/5 text-muted"
-                >
+              {search.q && (
+                <button onClick={() => setSearchQ('')} className="absolute right-2 top-1/2 grid h-7 w-7 -translate-y-1/2 place-items-center rounded-full bg-ink/5 text-muted">
                   <X size={15} />
                 </button>
               )}
             </div>
-            <button
-              onClick={saveSearch}
-              aria-label="Save search"
-              className="press grid h-11 w-11 shrink-0 place-items-center rounded-2xl border border-hairline bg-surface text-ink"
-            >
+            <button onClick={saveSearch} aria-label="Save search" className="press grid h-11 w-11 shrink-0 place-items-center rounded-2xl border border-hairline bg-surface text-ink">
               <Bookmark size={19} />
             </button>
           </div>
 
-          {/* Quick category chips */}
+          {/* Category chips */}
           <div className="no-scrollbar -mx-4 mt-2.5 flex gap-2 overflow-x-auto px-4">
-            <Chip active={!filters.category} onClick={() => navigate('/search')}>
-              All
-            </Chip>
+            <Chip active={!categoryId} onClick={() => navigate('/search')}>All</Chip>
             {CATEGORIES.map((c) => (
-              <Chip
-                key={c.id}
-                active={filters.category === c.id}
-                onClick={() => navigate(`/category/${c.id}`)}
-              >
-                <span className="flex items-center gap-1.5">
-                  <CategoryIcon name={c.icon} size={14} />
-                  {c.label}
-                </span>
+              <Chip key={c.id} active={categoryId === c.id} onClick={() => navigate(`/category/${c.id}`)}>
+                <span className="flex items-center gap-1.5"><CategoryIcon name={c.icon} size={14} /> {c.label}</span>
               </Chip>
             ))}
           </div>
@@ -132,79 +144,95 @@ export default function Search() {
       </div>
 
       <Container className="pt-3">
-        {/* Toolbar */}
-        <div className="flex items-center gap-2">
-          <p className="text-sm font-semibold text-muted">
-            {loading ? 'Searching…' : `${results.length} result${results.length === 1 ? '' : 's'}`}
-          </p>
-          <div className="ml-auto flex items-center gap-2">
-            <button
-              onClick={() => setShowSort(true)}
-              className="press inline-flex items-center gap-1.5 rounded-xl border border-hairline bg-surface px-3 py-1.5 text-sm font-semibold text-ink"
-            >
-              <ArrowUpDown size={15} /> Sort
-            </button>
-            <button
-              onClick={() => setShowFilters(true)}
-              className="press relative inline-flex items-center gap-1.5 rounded-xl border border-hairline bg-surface px-3 py-1.5 text-sm font-semibold text-ink"
-            >
-              <SlidersHorizontal size={15} /> Filters
-              {activeFilterCount > 0 && (
-                <span className="grid h-5 min-w-5 place-items-center rounded-full bg-accent px-1 text-[11px] font-bold text-accent-ink">
-                  {activeFilterCount}
-                </span>
-              )}
-            </button>
-          </div>
-        </div>
-
-        {/* Sub-category pills */}
+        {/* Subcategory pills */}
         {activeCat && (
-          <div className="no-scrollbar -mx-4 mt-3 flex gap-2 overflow-x-auto px-4">
-            <Chip active={!filters.sub} onClick={() => update({ sub: null })}>
-              All {activeCat.label}
-            </Chip>
+          <div className="no-scrollbar -mx-4 mb-2 flex gap-2 overflow-x-auto px-4">
+            <Chip active={!sub} onClick={() => setSub(null)}>All {activeCat.label}</Chip>
             {activeCat.subcategories.map((s) => (
-              <Chip key={s} active={filters.sub === s} onClick={() => update({ sub: filters.sub === s ? null : s })}>
-                {s}
-              </Chip>
+              <Chip key={s} active={sub === s} onClick={() => setSub(sub === s ? null : s)}>{s}</Chip>
             ))}
           </div>
         )}
 
+        {/* Quick filters + Filters button */}
+        <div className="no-scrollbar -mx-4 flex items-center gap-2 overflow-x-auto px-4 py-0.5">
+          <button
+            onClick={() => setShowFilters(true)}
+            className="press relative inline-flex shrink-0 items-center gap-1.5 rounded-full bg-ink px-3.5 py-2 text-sm font-semibold text-bg"
+          >
+            <SlidersHorizontal size={15} /> Filters{activeCount > 0 ? ` (${activeCount})` : ''}
+          </button>
+          {quicks.map((def) => {
+            const active = isFilterActive(def, values[def.key]);
+            return (
+              <button
+                key={def.key}
+                onClick={() => setQuickKey(def.key)}
+                className={`press inline-flex shrink-0 items-center gap-1 rounded-full border px-3.5 py-2 text-sm font-medium transition ${
+                  active ? 'border-transparent bg-accent-soft text-accent' : 'border-hairline bg-surface text-muted'
+                }`}
+              >
+                {active ? formatFilterValue(def, values[def.key]) : def.label}
+                <ChevronRight size={14} className="rotate-90 opacity-60" />
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Active filter chips */}
+        {activeList.length > 0 && (
+          <div className="no-scrollbar -mx-4 mt-2 flex items-center gap-2 overflow-x-auto px-4">
+            {activeList.map(({ def, text }) => (
+              <button
+                key={def.key}
+                onClick={() => removeFilter(def.key)}
+                className="press inline-flex shrink-0 items-center gap-1.5 rounded-full bg-accent px-3 py-1.5 text-xs font-semibold text-accent-ink"
+              >
+                <span className="opacity-80">{def.label}:</span> {text}
+                <X size={13} />
+              </button>
+            ))}
+            <button onClick={clearAll} className="press shrink-0 rounded-full px-2 py-1.5 text-xs font-bold text-danger">
+              Clear all
+            </button>
+          </div>
+        )}
+
+        {/* Toolbar */}
+        <div className="mt-3 flex items-center gap-2">
+          <p className="text-sm font-semibold text-muted">
+            {loading ? 'Searching…' : `${results.length} result${results.length === 1 ? '' : 's'}`}
+          </p>
+          <button onClick={() => setShowSort(true)} className="ml-auto press inline-flex items-center gap-1.5 rounded-xl border border-hairline bg-surface px-3 py-1.5 text-sm font-semibold text-ink">
+            <ArrowUpDown size={15} /> {SORTS.find((s) => s.value === search.sort)?.label.replace('Price: ', '') || 'Sort'}
+          </button>
+        </div>
+
         {/* View switch */}
         <div className="mt-3">
-          <Segmented options={VIEW_OPTIONS} value={view} onChange={setView} className="max-w-xs" />
+          <Segmented options={VIEW_OPTIONS} value={search.view} onChange={setView} className="max-w-xs" />
         </div>
 
         {/* Results */}
         <div className="mt-4 pb-8">
           {loading ? (
             <div className="grid grid-cols-2 gap-x-3 gap-y-6 sm:grid-cols-3 lg:grid-cols-4">
-              {Array.from({ length: 8 }).map((_, i) => (
-                <ListingCardSkeleton key={i} />
-              ))}
+              {Array.from({ length: 8 }).map((_, i) => <ListingCardSkeleton key={i} />)}
             </div>
           ) : results.length === 0 ? (
             <EmptyState
               icon={SearchIcon}
               title="No matches"
-              body="Try removing a filter or searching for something else."
-              action={<Button variant="soft" onClick={clearAll}>Clear filters</Button>}
+              body={activeCount ? 'No listings match all your filters. Try removing one.' : 'Try a different search.'}
+              action={activeCount ? <Button variant="soft" onClick={clearAll}>Clear filters</Button> : null}
             />
-          ) : view === 'map' ? (
+          ) : search.view === 'map' ? (
             <MapView listings={results} />
-          ) : view === 'list' ? (
-            <div className="divide-y divide-line/10">
-              {results.map((l) => (
-                <ListingRow key={l.id} listing={l} />
-              ))}
-            </div>
+          ) : search.view === 'list' ? (
+            <div className="divide-y divide-line/10">{results.map((l) => <ListingRow key={l.id} listing={l} />)}</div>
           ) : (
             <div className="grid grid-cols-2 gap-x-3 gap-y-6 sm:grid-cols-3 lg:grid-cols-4">
-              {results.map((l, i) => (
-                <ListingCard key={l.id} listing={l} index={i} />
-              ))}
+              {results.map((l, i) => <ListingCard key={l.id} listing={l} index={i} />)}
             </div>
           )}
         </div>
@@ -214,124 +242,112 @@ export default function Search() {
       <Sheet open={showSort} onClose={() => setShowSort(false)} title="Sort by">
         <div className="space-y-1 pb-2">
           {SORTS.map((s) => (
-            <button
-              key={s.value}
-              onClick={() => {
-                setSort(s.value);
-                setShowSort(false);
-              }}
-              className="press flex w-full items-center justify-between rounded-xl px-3 py-3 text-left text-[15px] font-medium text-ink hover:bg-elevated"
-            >
+            <button key={s.value} onClick={() => { setSort(s.value); setShowSort(false); }} className="press flex w-full items-center justify-between rounded-xl px-3 py-3 text-left text-[15px] font-medium text-ink hover:bg-elevated">
               {s.label}
-              {sort === s.value && <Check size={18} className="text-accent" />}
+              {search.sort === s.value && <Check size={18} className="text-accent" />}
             </button>
           ))}
         </div>
       </Sheet>
 
-      {/* Filters sheet */}
-      <FiltersSheet
+      {/* Full filter sheet */}
+      <FilterSheet
         open={showFilters}
         onClose={() => setShowFilters(false)}
-        filters={filters}
-        update={update}
-        clearAll={clearAll}
-        resultCount={results.length}
+        schema={schema}
+        base={base}
+        committed={values}
+        origin={ORIGIN}
+        onApply={commit}
+        title={activeCat ? `Filter ${activeCat.label}` : 'Filters'}
+      />
+
+      {/* Single quick filter sheet */}
+      <QuickFilterSheet
+        def={quickDef}
+        open={!!quickDef}
+        onClose={() => setQuickKey(null)}
+        schema={schema}
+        base={base}
+        committed={values}
+        origin={ORIGIN}
+        onApply={(key, v) => { setValue(key, v); setQuickKey(null); }}
+        onClear={(key) => { removeFilter(key); setQuickKey(null); }}
       />
     </div>
   );
 }
 
-function FiltersSheet({ open, onClose, filters, update, clearAll, resultCount }) {
-  const toggleCondition = (c) => {
-    const has = filters.conditions.includes(c);
-    update({ conditions: has ? filters.conditions.filter((x) => x !== c) : [...filters.conditions, c] });
-  };
-  const DISTANCES = [5, 10, 25, 50, 100];
+/* ---------------- Full filter sheet ---------------- */
+function FilterSheet({ open, onClose, schema, base, committed, origin, onApply, title }) {
+  const [pending, setPending] = useState(committed);
+  useEffect(() => { if (open) setPending(committed); }, [open]); // reseed on open
+
+  const count = useMemo(() => filterBySchema(base, schema, pending, origin).length, [base, schema, pending, origin]);
+  const active = countActiveSchema(schema, pending);
+  const setV = (key, v) => setPending((p) => ({ ...p, [key]: v }));
+
   return (
     <Sheet
       open={open}
       onClose={onClose}
-      title="Filters"
+      title={title}
       footer={
         <div className="flex gap-3">
-          <Button variant="outline" onClick={clearAll} className="flex-1">
-            Clear all
-          </Button>
-          <Button onClick={onClose} className="flex-[2]">
-            Show {resultCount} result{resultCount === 1 ? '' : 's'}
+          <Button variant="outline" onClick={() => setPending({})} className="flex-1">Clear all</Button>
+          <Button onClick={() => { onApply(pending); onClose(); }} className="flex-[2]">
+            Show {count} result{count === 1 ? '' : 's'}
           </Button>
         </div>
       }
     >
       <div className="space-y-6 py-2">
-        {/* Price */}
-        <div>
-          <h3 className="mb-2 text-sm font-bold text-ink">Price range (ZMW)</h3>
-          <div className="flex items-center gap-3">
-            <input
-              type="number"
-              inputMode="numeric"
-              placeholder="Min"
-              value={filters.min ?? ''}
-              onChange={(e) => update({ min: e.target.value ? Number(e.target.value) : null })}
-              className="focus-ring h-11 w-full rounded-xl border border-hairline bg-surface px-3 text-ink placeholder:text-faint"
-            />
-            <span className="text-faint">–</span>
-            <input
-              type="number"
-              inputMode="numeric"
-              placeholder="Max"
-              value={filters.max ?? ''}
-              onChange={(e) => update({ max: e.target.value ? Number(e.target.value) : null })}
-              className="focus-ring h-11 w-full rounded-xl border border-hairline bg-surface px-3 text-ink placeholder:text-faint"
-            />
+        {active > 0 && (
+          <p className="text-xs font-semibold text-accent">{active} filter{active === 1 ? '' : 's'} applied</p>
+        )}
+        {schema.filters.map((def) => (
+          <div key={def.key}>
+            <h3 className="mb-2 flex items-center gap-1.5 text-sm font-bold text-ink">
+              {def.label}
+              {isFilterActive(def, pending[def.key]) && <span className="h-1.5 w-1.5 rounded-full bg-accent" />}
+            </h3>
+            <FilterControl def={def} value={pending[def.key]} onChange={(v) => setV(def.key, v)} values={pending} />
           </div>
-        </div>
+        ))}
+      </div>
+    </Sheet>
+  );
+}
 
-        {/* Condition */}
-        <div>
-          <h3 className="mb-2 text-sm font-bold text-ink">Condition</h3>
-          <div className="flex flex-wrap gap-2">
-            {CONDITIONS.map((c) => (
-              <Chip key={c} active={filters.conditions.includes(c)} onClick={() => toggleCondition(c)}>
-                {c}
-              </Chip>
-            ))}
-          </div>
-        </div>
+/* ---------------- Single quick filter sheet ---------------- */
+function QuickFilterSheet({ def, open, onClose, schema, base, committed, origin, onApply, onClear }) {
+  const [pending, setPending] = useState(committed[def?.key]);
+  useEffect(() => { if (open && def) setPending(committed[def.key]); }, [open, def?.key]); // eslint-disable-line
 
-        {/* Distance */}
-        <div>
-          <h3 className="mb-2 flex items-center gap-1.5 text-sm font-bold text-ink">
-            <MapPin size={15} className="text-accent" /> Distance from {CURRENT_USER.location.split(',')[0]}
-          </h3>
-          <div className="flex flex-wrap gap-2">
-            <Chip active={filters.maxDistance == null} onClick={() => update({ maxDistance: null })}>
-              Anywhere
-            </Chip>
-            {DISTANCES.map((d) => (
-              <Chip key={d} active={filters.maxDistance === d} onClick={() => update({ maxDistance: d })}>
-                Within {d} km
-              </Chip>
-            ))}
-          </div>
-        </div>
+  const count = useMemo(() => {
+    if (!def) return 0;
+    return filterBySchema(base, schema, { ...committed, [def.key]: pending }, origin).length;
+  }, [def, base, schema, committed, pending, origin]);
 
-        {/* Negotiable */}
-        <button
-          onClick={() => update({ negotiableOnly: !filters.negotiableOnly })}
-          className="flex w-full items-center justify-between rounded-xl border border-hairline bg-surface px-4 py-3"
-        >
-          <span className="text-[15px] font-medium text-ink">Price negotiable only</span>
-          <span
-            className={`grid h-6 w-6 place-items-center rounded-md border ${
-              filters.negotiableOnly ? 'border-accent bg-accent text-accent-ink' : 'border-hairline'
-            }`}
-          >
-            {filters.negotiableOnly && <Check size={14} />}
-          </span>
-        </button>
+  if (!def) return null;
+  const active = isFilterActive(def, pending);
+
+  return (
+    <Sheet
+      open={open}
+      onClose={onClose}
+      title={def.label}
+      footer={
+        <div className="flex gap-3">
+          <Button variant="outline" onClick={() => onClear(def.key)} className="flex-1">Clear</Button>
+          <Button onClick={() => onApply(def.key, pending)} className="flex-[2]" disabled={!active && !isFilterActive(def, committed[def.key])}>
+            Show {count} result{count === 1 ? '' : 's'}
+          </Button>
+        </div>
+      }
+    >
+      <div className="py-2">
+        <FilterControl def={def} value={pending} onChange={setPending} values={committed} />
       </div>
     </Sheet>
   );

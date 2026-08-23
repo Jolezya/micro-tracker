@@ -109,6 +109,8 @@ const initialState = {
   conversations: seedConversations(),
   notifications: seedNotifications(),
   onboarded: false,
+  // Persisted search UI state. `filters` is keyed by category id ('all' for none).
+  search: { q: '', sort: 'relevant', view: 'grid', filters: {} },
 };
 
 function load() {
@@ -284,6 +286,14 @@ function reducer(state, action) {
       return {
         ...state,
         notifications: state.notifications.map((n) => (n.id === action.id ? { ...n, read: true } : n)),
+      };
+
+    case 'PATCH_SEARCH':
+      return { ...state, search: { ...state.search, ...action.patch } };
+    case 'SET_CATEGORY_FILTERS':
+      return {
+        ...state,
+        search: { ...state.search, filters: { ...state.search.filters, [action.category]: action.values } },
       };
 
     case 'RESET':

@@ -1,5 +1,10 @@
 import { describe, it, expect } from 'vitest';
-import { filterListings, sortListings, countActiveFilters, DEFAULT_FILTERS } from '../search.js';
+import {
+  filterListings, sortListings, countActiveFilters, DEFAULT_FILTERS,
+  filterBySchema, getField, isFilterActive, countActiveSchema, activeFilterList, matchFilter,
+} from '../search.js';
+import { LISTINGS } from '../../data/listings.js';
+import { schemaFor } from '../../data/filterSchema.js';
 import { detectCategory, suggestPrice, suggestTitle, generateDescription, isDuplicate, fraudScore, recommend } from '../ai.js';
 import { kwacha, kwachaCompact, timeAgo, distanceKm, formatDistance, compactNumber, initials, formatPrice } from '../format.js';
 import { gradientArt } from '../images.js';
@@ -168,6 +173,78 @@ describe('locations (Zambia)', () => {
     const c = townCoords({ name: 'Nsama', province: 'Northern' });
     expect(typeof c.lat).toBe('number');
     expect(typeof c.lng).toBe('number');
+  });
+});
+
+describe('category-aware filter framework', () => {
+  const vehicles = LISTINGS.filter((l) => l.category === 'vehicles');
+  const vSchema = schemaFor('vehicles');
+
+  it('resolves a different schema per category (and land for plots)', () => {
+    expect(schemaFor('vehicles').id).toBe('vehicles');
+    expect(schemaFor('jobs').id).toBe('jobs');
+    expect(schemaFor('property').id).toBe('property');
+    expect(schemaFor('property', 'Plots').id).toBe('land');
+    expect(schemaFor('fashion').id).toBe('default');
+  });
+
+  it('land schema has no "condition" filter but property does', () => {
+    expect(schemaFor('property', 'Plots').filters.some((f) => f.key === 'condition')).toBe(false);
+    expect(schemaFor('vehicles').filters.some((f) => f.key === 'condition')).toBe(true);
+  });
+
+  it('reads attrs-aware fields', () => {
+    const tesla = LISTINGS.find((l) => l.id === 'l_tesla_y');
+    expect(getField(tesla, 'fuel')).toBe('Electric');
+    expect(getField(tesla, 'price')).toBe(1050000);
+    expect(getField(tesla, 'vehicleType')).toBe('SUV');
+  });
+
+  it('combines filters intelligently (make + type + fuel + province + price)', () => {
+    const values = {
+      make: ['Tesla'],
+      vehicleType: ['SUV'],
+      fuel: ['Electric'],
+      location: { province: 'Lusaka' },
+      price: { min: 500000, max: 1500000 },
+    };
+    const res = filterBySchema(vehicles, vSchema, values, null);
+    expect(res.map((l) => l.id)).toContain('l_tesla_y');
+    // A conflicting brand yields nothing
+    expect(filterBySchema(vehicles, vSchema, { ...values, make: ['BMW'] }, null)).toHaveLength(0);
+  });
+
+  it('model options depend on the selected make', () => {
+    const modelDef = vSchema.filters.find((f) => f.key === 'model');
+    expect(modelDef.optionsFrom({ make: [] })).toEqual([]);
+    const bmwModels = modelDef.optionsFrom({ make: ['BMW'] });
+    expect(bmwModels).toContain('3 Series');
+    expect(bmwModels).not.toContain('Corolla');
+  });
+
+  it('range filters respect min/max and skip when empty', () => {
+    const yearDef = vSchema.filters.find((f) => f.key === 'year');
+    const tesla = LISTINGS.find((l) => l.id === 'l_tesla_y'); // 2023
+    expect(matchFilter(tesla, yearDef, { min: 2022, max: 2024 })).toBe(true);
+    expect(matchFilter(tesla, yearDef, { min: 2024, max: null })).toBe(false);
+    expect(matchFilter(tesla, yearDef, { min: null, max: null })).toBe(true); // inactive
+  });
+
+  it('location filter matches province/town and near-me radius', () => {
+    const locDef = vSchema.filters.find((f) => f.key === 'location');
+    const tesla = LISTINGS.find((l) => l.id === 'l_tesla_y'); // Lusaka
+    expect(matchFilter(tesla, locDef, { province: 'Lusaka' })).toBe(true);
+    expect(matchFilter(tesla, locDef, { province: 'Copperbelt' })).toBe(false);
+    expect(matchFilter(tesla, locDef, { nearMe: true, radius: 30 }, { lat: -15.4167, lng: 28.2833 })).toBe(true);
+  });
+
+  it('counts active filters and lists them for removal', () => {
+    const values = { make: ['Toyota'], price: { min: 100000, max: null }, fuel: [] };
+    expect(isFilterActive(vSchema.filters.find((f) => f.key === 'make'), values.make)).toBe(true);
+    expect(isFilterActive(vSchema.filters.find((f) => f.key === 'fuel'), values.fuel)).toBe(false);
+    expect(countActiveSchema(vSchema, values)).toBe(2);
+    const list = activeFilterList(vSchema, values);
+    expect(list.map((x) => x.def.key).sort()).toEqual(['make', 'price']);
   });
 });
 

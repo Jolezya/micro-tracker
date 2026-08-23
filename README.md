@@ -17,6 +17,12 @@ from a single codebase. Add it to your home screen and it behaves like a native 
 
 ## ✨ Highlights
 
+- **Category-aware search & filters** — a reusable, schema-driven filter framework (`data/filterSchema.js`):
+  each category defines its own filters (Vehicles get make→model, fuel, transmission, year, mileage…;
+  Property gets bedrooms, furnished, pool…; Land drops "condition" for plot size / title deed / services;
+  Jobs get job type, work mode, salary, experience). Quick filters, removable active-filter chips,
+  searchable dropdowns, ranges, live result counts, dependent options, and filters that persist per
+  category. Adding a new category = adding a schema, no UI changes.
 - **Premium design system** — Scandinavian minimalism, glassmorphism, soft shadows, luxury spacing,
   fluid Framer Motion transitions, micro-interactions, skeleton loading, pull-to-refresh, swipeable
   galleries with **pinch-to-zoom**, and full **light / dark mode**.
