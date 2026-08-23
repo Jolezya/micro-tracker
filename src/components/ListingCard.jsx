@@ -1,7 +1,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Heart, MapPin, Sparkles, Crown, BadgeCheck } from 'lucide-react';
+import { Heart, MapPin, Sparkles, Crown, BadgeCheck, Rocket } from 'lucide-react';
 import { ListingImage } from './ListingImage.jsx';
 import { Skeleton } from './ui/kit.jsx';
 import { formatPrice, timeAgo } from '../lib/format.js';
@@ -30,7 +30,7 @@ function SaveButton({ id, className = '' }) {
 }
 
 function BadgeChip({ badge }) {
-  const Icon = badge.kind === 'gold' ? Crown : badge.kind === 'verified' ? BadgeCheck : badge.kind === 'sponsored' ? Sparkles : null;
+  const Icon = badge.kind === 'gold' ? Crown : badge.kind === 'verified' ? BadgeCheck : badge.kind === 'sponsored' ? Sparkles : badge.kind === 'boosted' ? Rocket : null;
   const style = { background: BADGE_BG[badge.kind] };
   const cls = BADGE_STYLE[badge.kind] || 'text-white';
   return (

@@ -5,6 +5,7 @@ import {
 } from '../search.js';
 import { LISTINGS } from '../../data/listings.js';
 import { schemaFor } from '../../data/filterSchema.js';
+import { planBenefits, boostReach, LISTING_PLANS, BOOST_OPTIONS } from '../../data/plans.js';
 import { detectCategory, suggestPrice, suggestTitle, generateDescription, isDuplicate, fraudScore, recommend } from '../ai.js';
 import { kwacha, kwachaCompact, timeAgo, distanceKm, formatDistance, compactNumber, initials, formatPrice } from '../format.js';
 import { placeholderDataUri, resolveKind, coverPhoto, realPhotos } from '../media.js';
@@ -245,6 +246,45 @@ describe('category-aware filter framework', () => {
     expect(countActiveSchema(vSchema, values)).toBe(2);
     const list = activeFilterList(vSchema, values);
     expect(list.map((x) => x.def.key).sort()).toEqual(['make', 'price']);
+  });
+});
+
+describe('selling plans & monetisation', () => {
+  const texts = (planId, cat) => planBenefits(planId, cat).items.map((i) => i.text);
+
+  it('has exactly three individual selling plans, Premium recommended', () => {
+    expect(LISTING_PLANS.map((p) => p.id)).toEqual(['mahala', 'premium', 'gold']);
+    expect(LISTING_PLANS.find((p) => p.id === 'premium').recommended).toBe(true);
+    expect(LISTING_PLANS.find((p) => p.id === 'mahala').price).toBe(0);
+  });
+
+  it('benefits are category-aware', () => {
+    expect(texts('premium', 'vehicles')).toContain('Featured vehicle');
+    expect(texts('premium', 'vehicles')).toContain('Dealer promotion');
+    expect(texts('premium', 'property')).toContain('Featured property');
+    expect(texts('premium', 'jobs')).toContain('Highlighted job');
+    expect(texts('premium', 'jobs')).toContain('Employer branding');
+    expect(texts('gold', 'jobs')).toContain('Top of job search results');
+    // branding is hidden where irrelevant (electronics)
+    expect(texts('premium', 'electronics')).not.toContain('Dealer promotion');
+  });
+
+  it('plans inherit from the tier below', () => {
+    expect(planBenefits('premium').inherits).toBe('Mahala');
+    expect(planBenefits('gold').inherits).toBe('Premium');
+    expect(planBenefits('mahala').inherits).toBeNull();
+  });
+
+  it('boost reach scales with plan', () => {
+    expect(boostReach('gold')).toMatch(/homepage/i);
+    expect(boostReach('mahala')).not.toMatch(/homepage/i);
+    expect(BOOST_OPTIONS.map((b) => b.days)).toEqual([1, 3, 7]);
+  });
+
+  it('an active boost floats a listing to the top of relevance', () => {
+    const base = L({ id: 'plain', views: 5 });
+    const boosted = L({ id: 'boom', views: 1, boostedUntil: Date.now() + 3600000 });
+    expect(sortListings([base, boosted], 'relevant')[0].id).toBe('boom');
   });
 });
 

@@ -189,6 +189,7 @@ export function galleryImages(listing) {
 // Small badge set for a card (kept minimal to avoid crowding — max 2).
 export function badgesFor(listing, seller) {
   const out = [];
+  if (listing.boostedUntil && listing.boostedUntil > Date.now()) out.push({ label: 'Boosted', kind: 'boosted' });
   if (listing.sponsored) out.push({ label: 'Sponsored', kind: 'sponsored' });
   const plan = listing.listingPlan;
   if (plan === 'gold' || (!plan && listing.premium && listing.sponsored)) out.push({ label: 'Gold', kind: 'gold' });
@@ -206,6 +207,7 @@ export const BADGE_STYLE = {
   new: 'text-accent-ink',
   verified: 'text-white',
   featured: 'text-white',
+  boosted: 'text-white',
 };
 export const BADGE_BG = {
   premium: 'rgb(var(--accent))',
@@ -213,4 +215,5 @@ export const BADGE_BG = {
   new: 'rgb(var(--accent))',
   verified: '#2563eb',
   featured: '#7c3aed',
+  boosted: '#ea580c',
 };

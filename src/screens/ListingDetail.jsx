@@ -16,6 +16,7 @@ import { useAllListings, useStore } from '../lib/store.jsx';
 import { getUser } from '../data/users.js';
 import { CATEGORY_MAP } from '../data/categories.js';
 import { galleryImages } from '../lib/media.js';
+import { LivePlanPanel } from '../components/plan/PlanUI.jsx';
 import { formatPrice, timeAgo, memberSince, distanceKm, formatDistance, compactNumber } from '../lib/format.js';
 import { recommend, fraudScore } from '../lib/ai.js';
 import { CURRENT_USER } from '../data/users.js';
@@ -52,6 +53,7 @@ export default function ListingDetail() {
   const seller = getUser(listing.sellerId) || CURRENT_USER;
   const saved = state.saved.includes(listing.id);
   const dist = distanceKm(CURRENT_USER, listing.location);
+  const mine = listing.mine || listing.sellerId === CURRENT_USER.id;
 
   const onShare = async () => {
     const url = window.location.href;
@@ -135,8 +137,15 @@ export default function ListingDetail() {
           </span>
         </div>
 
+        {/* Owner panel — upgrade / boost your own live listing */}
+        {mine && (
+          <div className="mt-4">
+            <LivePlanPanel listing={listing} />
+          </div>
+        )}
+
         {/* Trust bar */}
-        {trust && (
+        {!mine && trust && (
           <div className="mt-4 flex items-center gap-3 rounded-2xl border border-hairline bg-surface p-3">
             <span
               className={`grid h-10 w-10 shrink-0 place-items-center rounded-full ${
@@ -244,17 +253,19 @@ export default function ListingDetail() {
         )}
       </Container>
 
-      {/* Sticky action bar */}
-      <div className="fixed inset-x-0 bottom-[68px] z-40 lg:bottom-0">
-        <div className="glass mx-auto flex max-w-3xl items-center gap-3 border-t px-4 py-3 pb-safe">
-          <Button variant="outline" size="lg" onClick={() => toast(`Calling ${seller.name.split(' ')[0]}…`, { type: 'info' })} className="flex-1">
-            <Phone size={18} /> Call
-          </Button>
-          <Button size="lg" onClick={onMessage} className="flex-[2]">
-            <MessageCircle size={18} /> Message seller
-          </Button>
+      {/* Sticky action bar — hidden on your own listing */}
+      {!mine && (
+        <div className="fixed inset-x-0 bottom-[68px] z-40 lg:bottom-0">
+          <div className="glass mx-auto flex max-w-3xl items-center gap-3 border-t px-4 py-3 pb-safe">
+            <Button variant="outline" size="lg" onClick={() => toast(`Calling ${seller.name.split(' ')[0]}…`, { type: 'info' })} className="flex-1">
+              <Phone size={18} /> Call
+            </Button>
+            <Button size="lg" onClick={onMessage} className="flex-[2]">
+              <MessageCircle size={18} /> Message seller
+            </Button>
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Report sheet */}
       <Sheet open={report} onClose={() => setReport(false)} title="Report listing">

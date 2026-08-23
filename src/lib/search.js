@@ -87,6 +87,7 @@ export function sortListings(listings, sort, origin = null, q = '') {
 
 function relevance(l, q) {
   let s = 0;
+  if (l.boostedUntil && l.boostedUntil > Date.now()) s += 120; // active boost floats to top
   if (l.sponsored) s += 40;
   if (l.premium) s += 25;
   s += Math.log10((l.views || 0) + 1) * 6;

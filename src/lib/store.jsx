@@ -8,6 +8,7 @@ import React, {
 } from 'react';
 import { LISTINGS } from '../data/listings.js';
 import { CURRENT_USER } from '../data/users.js';
+import { LISTING_PLAN_MAP, BOOST_MAP } from '../data/plans.js';
 
 // ============================================================
 // Kaira client store — the app's local "backend".
@@ -204,6 +205,31 @@ function reducer(state, action) {
     }
     case 'DELETE_LISTING':
       return { ...state, myListings: state.myListings.filter((l) => l.id !== action.id) };
+
+    case 'UPGRADE_LISTING': {
+      const plan = LISTING_PLAN_MAP[action.plan];
+      if (!plan) return state;
+      return {
+        ...state,
+        myListings: state.myListings.map((l) =>
+          l.id === action.id
+            ? { ...l, listingPlan: action.plan, premium: plan.flags.premium, sponsored: plan.flags.sponsored }
+            : l
+        ),
+      };
+    }
+
+    case 'BOOST_LISTING': {
+      const boost = BOOST_MAP[action.boostId];
+      if (!boost) return state;
+      const until = Date.now() + boost.days * 86400000;
+      return {
+        ...state,
+        myListings: state.myListings.map((l) =>
+          l.id === action.id ? { ...l, boostedUntil: until, boostId: action.boostId } : l
+        ),
+      };
+    }
 
     case 'START_CONVERSATION': {
       const existing = state.conversations.find(

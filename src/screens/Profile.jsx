@@ -3,15 +3,17 @@ import { Link, useNavigate } from 'react-router-dom';
 import {
   Settings, Heart, Package, FileText, Bookmark, Users, Crown, ChevronRight,
   Moon, Sun, Bell, ShieldCheck, LogOut, LogIn, Sparkles, Eye, BarChart3, Trash2, Pencil,
+  Rocket, ArrowUpRight,
 } from 'lucide-react';
 import { ScreenHeader, Container } from '../components/layout/Header.jsx';
 import { ListingRow } from '../components/ListingCard.jsx';
 import { Button, Avatar, PlanBadge, Badge, Switch, Segmented, EmptyState, Divider } from '../components/ui/kit.jsx';
 import { Sheet } from '../components/ui/Sheet.jsx';
+import { BoostSheet, UpgradeSheet } from '../components/plan/PlanUI.jsx';
 import { useToast } from '../components/ui/Toast.jsx';
 import { useAllListings, useStore } from '../lib/store.jsx';
 import { CURRENT_USER } from '../data/users.js';
-import { PLAN_MAP } from '../data/plans.js';
+import { PLAN_MAP, LISTING_PLAN_MAP } from '../data/plans.js';
 import { compactNumber } from '../lib/format.js';
 
 export default function Profile() {
@@ -21,6 +23,8 @@ export default function Profile() {
   const all = useAllListings();
   const [settings, setSettings] = useState(false);
   const [notif, setNotif] = useState({ messages: true, price: true, searches: true, marketing: false });
+  const [boostFor, setBoostFor] = useState(null);
+  const [upgradeFor, setUpgradeFor] = useState(null);
 
   const isGuest = state.auth.status === 'guest';
   const user = state.auth.user || CURRENT_USER;
@@ -107,27 +111,47 @@ export default function Profile() {
               </Button>
             </div>
           ) : (
-            <div className="divide-y divide-line/10">
-              {myListings.map((l) => (
-                <div key={l.id} className="flex items-center gap-1">
-                  <div className="min-w-0 flex-1">
-                    <ListingRow listing={l} />
+            <div className="space-y-2">
+              {myListings.map((l) => {
+                const lp = LISTING_PLAN_MAP[l.listingPlan || 'mahala'];
+                const boosted = l.boostedUntil && l.boostedUntil > Date.now();
+                return (
+                  <div key={l.id} className="rounded-2xl border border-hairline bg-surface p-1.5">
+                    <div className="flex items-center gap-1">
+                      <div className="min-w-0 flex-1">
+                        <ListingRow listing={l} />
+                      </div>
+                      <button
+                        onClick={() => { dispatch({ type: 'DELETE_LISTING', id: l.id }); toast('Listing removed'); }}
+                        className="press grid h-9 w-9 shrink-0 place-items-center rounded-full text-muted hover:text-danger"
+                        aria-label="Delete"
+                      >
+                        <Trash2 size={17} />
+                      </button>
+                    </div>
+                    <div className="flex items-center gap-2 px-2 pb-1 pt-0.5">
+                      <span className="text-xs font-bold" style={{ color: lp.accent }}>{lp.emoji} {lp.name}</span>
+                      {boosted && <span className="text-xs font-bold text-[#ea580c]">🚀 Boosted</span>}
+                      <div className="ml-auto flex items-center gap-1.5">
+                        {l.listingPlan !== 'gold' && (
+                          <button onClick={() => setUpgradeFor(l)} className="press inline-flex items-center gap-1 rounded-full bg-accent-soft px-2.5 py-1 text-xs font-bold text-accent">
+                            <ArrowUpRight size={13} /> Upgrade
+                          </button>
+                        )}
+                        <button onClick={() => setBoostFor(l)} className="press inline-flex items-center gap-1 rounded-full bg-[#ea580c]/12 px-2.5 py-1 text-xs font-bold text-[#ea580c]">
+                          <Rocket size={13} /> Boost
+                        </button>
+                      </div>
+                    </div>
                   </div>
-                  <button
-                    onClick={() => {
-                      dispatch({ type: 'DELETE_LISTING', id: l.id });
-                      toast('Listing removed');
-                    }}
-                    className="press grid h-9 w-9 shrink-0 place-items-center rounded-full text-muted hover:text-danger"
-                    aria-label="Delete"
-                  >
-                    <Trash2 size={17} />
-                  </button>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </section>
+
+        {upgradeFor && <UpgradeSheet open listing={upgradeFor} onClose={() => setUpgradeFor(null)} />}
+        {boostFor && <BoostSheet open listing={boostFor} onClose={() => setBoostFor(null)} />}
 
         {/* Drafts */}
         {state.drafts.length > 0 && (

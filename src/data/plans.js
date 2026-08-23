@@ -89,88 +89,177 @@ export const PLAN_BADGE = {
   enterprise: { label: 'Business', color: '#4f46e5' },
 };
 
-// Per-listing plans chosen in the Sell flow. Prices are one-off, per listing,
-// in Zambian Kwacha. "Mahala" is Zambian for "free".
+// ============================================================
+// Selling plans — the monetisation model.
+//
+// Principle: everyone can sell. Paying buys VISIBILITY, not access.
+//   Mahala  → sell for free (a complete basic selling experience)
+//   Premium → sell faster (more visibility)   ← recommended
+//   Gold    → maximum exposure (a real step up)
+//   Boost   → temporary extra exposure, separate from the plan
+//   Corporate → a business platform, separate from individual plans
+//
+// Benefits are CATEGORY-AWARE: the architecture is shared, the wording adapts
+// (see planBenefits()). Prices are one-off, per listing, in Kwacha.
+// ============================================================
+
+export const SELL_PRINCIPLE = 'Everyone can sell. Paying gives you more visibility — not basic access.';
+
+// The three individual selling plans (Corporate is separate, below).
 export const LISTING_PLANS = [
   {
     id: 'mahala',
     name: 'Mahala',
-    subtitle: 'Free',
+    subtitle: 'Sell for free',
+    positioning: 'List your item and reach buyers.',
     price: 0,
     durationDays: 30,
     photoLimit: 8,
-    visibility: 'Standard visibility',
-    accent: '#64748b',
+    visibility: 'Standard exposure',
+    accent: '#0f6c54',
     badge: null,
-    // flags applied to the published listing
+    emoji: '🟢',
     flags: { premium: false, sponsored: false },
-    features: [
-      'Live for 30 days',
-      'Up to 8 photos',
-      'Shows in search & category',
-      'Chat with buyers',
-    ],
+    caps: ['create', 'photos', 'normalSearch', 'messages', 'editSave', 'durationStd'],
   },
   {
     id: 'premium',
     name: 'Premium',
     subtitle: 'Sell faster',
-    price: 25,
+    positioning: 'Get more visibility and sell faster.',
+    price: 35,
     durationDays: 45,
     photoLimit: 15,
     visibility: 'Boosted — up to 3× more views',
     accent: '#0f6c54',
     badge: 'Premium',
+    emoji: '⭐',
     recommended: true,
     flags: { premium: true, sponsored: false },
-    features: [
-      'Everything in Mahala',
-      'Live for 45 days',
-      'Up to 15 photos',
-      'Higher search ranking',
-      'Premium badge on your listing',
-    ],
+    caps: ['higherSearch', 'premiumBadge', 'featured', 'recs', 'durationLong', 'analyticsBasic', 'canBoost', 'branding'],
   },
   {
     id: 'gold',
     name: 'Gold',
     subtitle: 'Maximum exposure',
-    price: 60,
+    positioning: 'Put your listing in front of more buyers.',
+    price: 80,
     durationDays: 60,
     photoLimit: 25,
-    visibility: 'Top placement + homepage spotlight',
+    visibility: 'Top placement + homepage',
     accent: '#b08d4a',
     badge: 'Gold',
+    emoji: '👑',
     flags: { premium: true, sponsored: true },
-    features: [
-      'Everything in Premium',
-      'Live for 60 days',
-      'Up to 25 photos',
-      'Top of search results',
-      'Homepage spotlight',
-      'Gold badge on your listing',
-    ],
-  },
-  {
-    id: 'corporate',
-    name: 'Corporate',
-    subtitle: 'For dealers & businesses',
-    price: null,
-    priceLabel: 'Contact us',
-    durationDays: 90,
-    photoLimit: 40,
-    visibility: 'Priority placement + branding',
-    accent: '#4f46e5',
-    badge: 'Business',
-    flags: { premium: true, sponsored: true },
-    features: [
-      'Everything in Gold',
-      'Live for 90 days',
-      'Company branding on listings',
-      'Bulk uploads & API access',
-      'Dedicated account manager',
-    ],
+    caps: ['topPlacement', 'goldBadge', 'homepage', 'featuredCat', 'priorityRecs', 'promo', 'durationMax', 'analyticsAdv', 'prioritySupport'],
   },
 ];
 
-export const LISTING_PLAN_MAP = Object.fromEntries(LISTING_PLANS.map((p) => [p.id, p]));
+// Corporate — a business platform, deliberately separate from the plans above.
+export const CORPORATE = {
+  id: 'corporate',
+  name: 'Corporate',
+  subtitle: 'Business selling platform',
+  positioning: 'For dealerships, agencies, recruiters, retailers and high-volume sellers.',
+  price: null,
+  priceLabel: "Let's talk",
+  accent: '#4f46e5',
+  badge: 'Business',
+  emoji: '🏢',
+  flags: { premium: true, sponsored: true },
+  photoLimit: 40,
+  durationDays: 90,
+  features: [
+    'Unlimited & bulk listings (with bulk upload)',
+    'Business profile & company branding',
+    'Multiple staff user accounts',
+    'Listing management dashboard',
+    'Advanced analytics & lead management',
+    'Priority exposure across the marketplace',
+    'Corporate advertising & promo tools',
+    'Dedicated account manager & priority support',
+  ],
+};
+
+export const LISTING_PLAN_MAP = Object.fromEntries([...LISTING_PLANS, CORPORATE].map((p) => [p.id, p]));
+
+// ---- Boost: temporary extra exposure, independent of the plan ----
+export const BOOST_OPTIONS = [
+  { id: 'b24', label: '24 hours', days: 1, price: 15, blurb: 'A quick spike' },
+  { id: 'b3', label: '3 days', days: 3, price: 30, blurb: 'Most popular', popular: true },
+  { id: 'b7', label: '7 days', days: 7, price: 60, blurb: 'Best value' },
+];
+export const BOOST_MAP = Object.fromEntries(BOOST_OPTIONS.map((b) => [b.id, b]));
+
+// Boost reaches further on higher plans.
+export function boostReach(planId) {
+  if (planId === 'gold') return 'Top of search, recommendations & homepage';
+  if (planId === 'premium') return 'Top of search + recommendations';
+  return 'Lifted to the top of search results';
+}
+
+// ============================================================
+// Category-aware benefit resolver.
+// Each capability renders category-appropriate wording; returns null when a
+// capability is not relevant to a category (so it is automatically hidden).
+// ============================================================
+const CAP = {
+  create: () => 'Photos, title, description, price & location',
+  photos: () => 'Upload multiple photos',
+  normalSearch: () => 'Appears in normal search results',
+  messages: () => 'Receive buyer messages & chat',
+  editSave: () => 'Edit, manage & save your listing',
+  durationStd: () => 'Standard 30-day listing',
+  durationLong: () => 'Longer 45-day listing',
+  durationMax: () => 'Longest 60-day listing',
+  higherSearch: (c) =>
+    c === 'jobs' ? 'Higher position in job search' :
+    c === 'property' ? 'Location-based priority in search' :
+    c === 'vehicles' ? 'Higher vehicle search placement' :
+    'Higher position in search results',
+  topPlacement: (c) => (c === 'jobs' ? 'Top of job search results' : 'Top placement in relevant search'),
+  premiumBadge: () => 'Premium badge on your listing',
+  goldBadge: () => 'Gold verified badge on your listing',
+  featured: (c) =>
+    c === 'vehicles' ? 'Featured vehicle' :
+    c === 'property' ? 'Featured property' :
+    c === 'jobs' ? 'Highlighted job' :
+    'Featured placement',
+  featuredCat: (c) =>
+    c === 'vehicles' ? 'Featured in the Vehicles hub' :
+    c === 'property' ? 'Featured in the Property hub' :
+    c === 'jobs' ? 'Featured in the Jobs hub' :
+    'Featured category placement',
+  homepage: () => 'Homepage exposure',
+  recs: (c) => (c === 'jobs' ? 'Increased applicant visibility' : 'More exposure in recommendations'),
+  priorityRecs: (c) => (c === 'jobs' ? 'Priority applicant visibility' : 'Priority placement in recommendations'),
+  branding: (c) =>
+    c === 'vehicles' ? 'Dealer promotion' :
+    c === 'jobs' ? 'Employer branding' :
+    c === 'property' ? 'Agency branding' :
+    null, // not shown for products/electronics/fashion/etc.
+  promo: () => 'Promotional / boosted exposure included',
+  analyticsBasic: () => 'Basic listing analytics',
+  analyticsAdv: () => 'Advanced analytics & insights',
+  prioritySupport: () => 'Priority customer support',
+  canBoost: () => 'Boost this listing anytime 🚀',
+};
+
+const INHERITS = { premium: 'Mahala', gold: 'Premium' };
+
+// Returns { inherits, items:[{ text }] } — the plan's own benefits, worded for
+// the given category (null category → generic product wording).
+export function planBenefits(planId, categoryId = null) {
+  const plan = LISTING_PLAN_MAP[planId];
+  if (!plan) return { inherits: null, items: [] };
+  const items = (plan.caps || [])
+    .map((key) => (CAP[key] ? CAP[key](categoryId) : null))
+    .filter(Boolean)
+    .map((text) => ({ text }));
+  return { inherits: INHERITS[planId] || null, items };
+}
+
+// A one-line "what you get" summary per plan (for compact cards).
+export function planTagline(planId) {
+  return { mahala: 'Sell for free', premium: 'More visibility, sell faster', gold: 'Maximum exposure' }[planId] || '';
+}

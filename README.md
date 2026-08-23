@@ -141,11 +141,27 @@ worker runtime-caches remote images for offline viewing.
 
 ---
 
-## 🔌 Subscriptions
+## 🔌 Selling plans & monetisation
 
-Four tiers — **Free**, **KA Premium**, **KA Gold** and **Enterprise** — unlock features (visibility,
-listing limits, analytics, badges, AI tools). Consistent with the product principle, **Kaira never
-processes payments**; plans simply toggle capabilities in the store.
+One principle: **everyone can sell — paying buys visibility, not access.** Basic selling functionality
+is never gated. Defined in `data/plans.js`:
+
+- **Mahala (free)** — a complete basic listing: photos, title, price, location, normal search,
+  buyer chat, edit/save, 30-day duration.
+- **Premium** *(recommended)* — sell faster: higher search position, Premium badge, featured
+  placement, more recommendations, longer duration, analytics, boost ability.
+- **Gold** — maximum exposure: top placement, Gold badge, homepage exposure, featured-category,
+  priority recommendations, longest duration, advanced analytics, priority support.
+- **Boost** 🚀 — a *separate* add-on (24h / 3d / 7d) available on any plan, reach scaling with the
+  plan. Applies to existing listings without changing the plan.
+- **Corporate** 🏢 — a *separate* business platform (bulk upload, company profile & branding, staff
+  accounts, lead management, dashboard, dedicated support).
+
+**Benefits are category-aware:** `planBenefits(plan, category)` adapts wording automatically —
+"Featured vehicle" / "Featured property" / "Highlighted job", "Dealer promotion" vs "Employer
+branding" (hidden entirely where irrelevant). Sellers choose a plan in the guided Sell flow (with
+"Compare plans"), and can **upgrade or boost a live listing** afterwards from the listing page or
+their profile — no need to recreate it. Kaira never processes the buyer↔seller payment.
 
 ---
 

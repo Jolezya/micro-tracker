@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { motion, AnimatePresence, Reorder } from 'framer-motion';
 import {
   ChevronLeft, ChevronRight, ImagePlus, Sparkles, Wand2, X, Check, Camera, Crop,
@@ -13,6 +13,7 @@ import { useToast } from '../components/ui/Toast.jsx';
 import { CATEGORIES, CATEGORY_MAP, CONDITIONS } from '../data/categories.js';
 import { CURRENT_USER } from '../data/users.js';
 import { LISTING_PLANS, LISTING_PLAN_MAP } from '../data/plans.js';
+import { PlanBenefitList } from '../components/plan/PlanUI.jsx';
 import { TOWNS_BY_PROVINCE, locationOf } from '../data/locations.js';
 import { useAllListings, useStore } from '../lib/store.jsx';
 import { placeholderDataUri } from '../lib/media.js';
@@ -157,7 +158,7 @@ export default function Sell() {
             exit={{ opacity: 0, x: -20 }}
             transition={{ duration: 0.26, ease: [0.22, 1, 0.36, 1] }}
           >
-            {step === 0 && <PlanStep value={form.listingPlan} onSelect={(id) => set({ listingPlan: id })} />}
+            {step === 0 && <PlanStep value={form.listingPlan} onSelect={(id) => set({ listingPlan: id })} category={form.category} />}
             {step === 1 && (
               <PhotoStep
                 form={form}
@@ -227,24 +228,22 @@ export default function Sell() {
 /* ------------------------------------------------------------------ */
 /* Step 1 — Plan                                                       */
 /* ------------------------------------------------------------------ */
-function PlanStep({ value, onSelect }) {
-  const ICONS = { mahala: Tag, premium: Sparkles, gold: Crown, corporate: Building2 };
+function PlanStep({ value, onSelect, category }) {
   return (
     <div>
-      <h2 className="text-xl font-extrabold text-ink">How do you want to list?</h2>
-      <p className="mt-1 text-sm text-muted">Start free with Mahala, or boost your reach. You can change this before you publish.</p>
+      <h2 className="text-xl font-extrabold text-ink">How do you want to sell?</h2>
+      <p className="mt-1 text-sm text-muted">Everyone can sell for free. Paying just gives your listing more visibility. You can change this before you publish.</p>
       <div className="mt-4 space-y-3">
         {LISTING_PLANS.map((p) => {
           const active = value === p.id;
-          const Icon = ICONS[p.id] || Tag;
           return (
             <button
               key={p.id}
               onClick={() => onSelect(p.id)}
               className={`press relative block w-full rounded-3xl border p-4 text-left transition ${
-                active ? 'border-transparent ring-2 shadow-lift' : 'border-hairline'
+                active ? 'border-transparent shadow-lift' : 'border-hairline'
               } bg-surface`}
-              style={active ? { '--tw-ring-color': p.accent, boxShadow: `0 0 0 2px ${p.accent}` } : undefined}
+              style={active ? { boxShadow: `0 0 0 2px ${p.accent}` } : undefined}
             >
               {p.recommended && (
                 <span className="absolute -top-2.5 right-4 rounded-full bg-accent px-2.5 py-0.5 text-[11px] font-bold text-accent-ink">
@@ -252,8 +251,8 @@ function PlanStep({ value, onSelect }) {
                 </span>
               )}
               <div className="flex items-start gap-3">
-                <span className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl" style={{ background: `${p.accent}1f`, color: p.accent }}>
-                  <Icon size={22} />
+                <span className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl text-2xl" style={{ background: `${p.accent}1f` }}>
+                  {p.emoji}
                 </span>
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2">
@@ -261,49 +260,49 @@ function PlanStep({ value, onSelect }) {
                     <span className="text-sm font-medium text-muted">· {p.subtitle}</span>
                   </div>
                   <div className="mt-0.5 flex items-baseline gap-1.5">
-                    <span className="text-xl font-extrabold text-ink">
-                      {p.price == null ? p.priceLabel : p.price === 0 ? 'Free' : kr(p.price)}
-                    </span>
+                    <span className="text-xl font-extrabold text-ink">{p.price === 0 ? 'Free' : kr(p.price)}</span>
                     {p.price > 0 && <span className="text-xs text-muted">per listing</span>}
                   </div>
-                  {/* quick facts */}
+                  <p className="mt-0.5 text-sm text-muted">{p.positioning}</p>
                   <div className="mt-2 flex flex-wrap gap-1.5">
                     <Fact>{p.durationDays} days live</Fact>
-                    <Fact>{p.photoLimit >= 40 ? 'Unlimited photos' : `${p.photoLimit} photos`}</Fact>
+                    <Fact>{p.photoLimit} photos</Fact>
                     <Fact>{p.visibility}</Fact>
                   </div>
                 </div>
                 <span
-                  className={`mt-1 grid h-6 w-6 shrink-0 place-items-center rounded-full border-2 ${
-                    active ? 'border-transparent text-white' : 'border-line/30'
-                  }`}
+                  className={`mt-1 grid h-6 w-6 shrink-0 place-items-center rounded-full border-2 ${active ? 'border-transparent text-white' : 'border-line/30'}`}
                   style={active ? { background: p.accent } : undefined}
                 >
                   {active && <Check size={14} strokeWidth={3} />}
                 </span>
               </div>
-              {/* benefits reveal when active */}
               <AnimatePresence initial={false}>
-                {active && (
-                  <motion.ul
+                {active && p.id !== 'mahala' && (
+                  <motion.div
                     initial={{ height: 0, opacity: 0 }}
                     animate={{ height: 'auto', opacity: 1 }}
                     exit={{ height: 0, opacity: 0 }}
-                    className="mt-3 grid gap-1.5 overflow-hidden border-t border-hairline pt-3"
+                    className="mt-3 overflow-hidden border-t border-hairline pt-3"
                   >
-                    {p.features.map((f) => (
-                      <li key={f} className="flex items-center gap-2 text-sm text-ink">
-                        <Check size={15} className="shrink-0" style={{ color: p.accent }} strokeWidth={2.6} />
-                        {f}
-                      </li>
-                    ))}
-                  </motion.ul>
+                    <PlanBenefitList planId={p.id} category={category} />
+                  </motion.div>
                 )}
               </AnimatePresence>
             </button>
           );
         })}
       </div>
+
+      <div className="mt-3 flex items-center justify-between px-1">
+        <Link to="/plans" className="press inline-flex items-center gap-1 text-sm font-bold text-accent">
+          Compare plans <ChevronRight size={15} />
+        </Link>
+        <Link to="/plans" className="press inline-flex items-center gap-1 text-sm font-semibold text-muted">
+          🏢 Selling as a business?
+        </Link>
+      </div>
+
       <p className="mt-3 flex items-start gap-1.5 px-1 text-xs text-faint">
         <Info size={13} className="mt-0.5 shrink-0" /> Plan fees are billed to your Kaira account. Kaira never handles the payment between you and your buyer.
       </p>
