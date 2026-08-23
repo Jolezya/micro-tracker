@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import {
   ChevronLeft, Heart, Share2, Flag, MapPin, MessageCircle, Phone, ShieldCheck,
-  Clock, Eye, Tag, ChevronRight, Sparkles,
+  Clock, Eye, Tag, ChevronRight, Sparkles, BadgeCheck,
 } from 'lucide-react';
 import { Gallery } from '../components/Gallery.jsx';
 import { MapView } from '../components/MapView.jsx';
@@ -178,13 +178,20 @@ export default function ListingDetail() {
               {seller.verified?.includes('id') && <VerifiedBadge size={15} />}
               <PlanBadge plan={seller.plan} />
             </div>
-            <div className="mt-0.5 flex items-center gap-2 text-xs text-muted">
+            <div className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-muted">
               <Stars rating={seller.rating} size={12} />
-              <span>· {seller.reviews} reviews</span>
+              <span>· {seller.reviews} deals</span>
+              <span>· Member since {memberSince(seller.memberSince).split(' ')[1]}</span>
               <span>· Replies {seller.responseTime}</span>
             </div>
+            {/* verification chips — subtle trust signals */}
+            <div className="mt-1.5 flex flex-wrap gap-1.5">
+              {seller.business && <TrustChip>Verified business</TrustChip>}
+              {seller.verified?.includes('id') && <TrustChip>ID verified</TrustChip>}
+              {seller.verified?.includes('phone') && <TrustChip>Phone verified</TrustChip>}
+            </div>
           </div>
-          <ChevronRight size={20} className="text-faint" />
+          <ChevronRight size={20} className="shrink-0 self-start text-faint" />
         </Link>
 
         {/* Description */}
@@ -286,5 +293,13 @@ export default function ListingDetail() {
         </div>
       </Sheet>
     </div>
+  );
+}
+
+function TrustChip({ children }) {
+  return (
+    <span className="inline-flex items-center gap-1 rounded-full bg-accent-soft px-2 py-0.5 text-[11px] font-semibold text-accent">
+      <BadgeCheck size={11} strokeWidth={2.6} /> {children}
+    </span>
   );
 }

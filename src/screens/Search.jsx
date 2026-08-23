@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import {
   Search as SearchIcon, SlidersHorizontal, ArrowUpDown, X, Map, LayoutGrid,
-  Rows3, Bookmark, Check, ChevronRight,
+  Rows3, Bookmark, Check, ChevronRight, Sparkles,
 } from 'lucide-react';
 import { Container } from '../components/layout/Header.jsx';
 import { ListingCard, ListingRow, ListingCardSkeleton } from '../components/ListingCard.jsx';
@@ -15,6 +15,7 @@ import { useToast } from '../components/ui/Toast.jsx';
 import { CATEGORIES, CATEGORY_MAP } from '../data/categories.js';
 import { CURRENT_USER } from '../data/users.js';
 import { schemaFor, quickFilters, hydrateSchema, resolveOptions } from '../data/filterSchema.js';
+import { runNaturalSearch } from '../lib/nlSearch.js';
 import { useAllListings, useStore } from '../lib/store.jsx';
 import {
   matchesText, filterBySchema, sortListings, SORTS,
@@ -96,6 +97,12 @@ export default function Search() {
   const clearAll = () => commit({});
 
   const setSearchQ = (q) => dispatch({ type: 'PATCH_SEARCH', patch: { q } });
+  const askAI = () => {
+    const text = (search.q || '').trim();
+    if (!text) return;
+    const res = runNaturalSearch(text, dispatch, navigate);
+    if (res.summary) toast(`AI found: ${res.summary}`, { type: 'info' });
+  };
   const setSort = (sort) => dispatch({ type: 'PATCH_SEARCH', patch: { sort } });
   const setView = (view) => dispatch({ type: 'PATCH_SEARCH', patch: { view } });
 
@@ -113,20 +120,23 @@ export default function Search() {
       <div className="glass sticky top-0 z-30 safe-top">
         <Container className="py-2.5">
           <div className="flex items-center gap-2">
-            <div className="relative flex-1">
+            <form onSubmit={(e) => { e.preventDefault(); askAI(); }} className="relative flex-1">
               <SearchIcon size={18} className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-faint" />
               <input
                 value={search.q}
                 onChange={(e) => setSearchQ(e.target.value)}
-                placeholder="Search Kaira…"
-                className="focus-ring h-11 w-full rounded-2xl border border-hairline bg-surface pl-10 pr-9 text-[15px] text-ink placeholder:text-faint"
+                placeholder="Search or ask in your own words…"
+                className="focus-ring h-11 w-full rounded-2xl border border-hairline bg-surface pl-10 pr-20 text-[15px] text-ink placeholder:text-faint"
               />
               {search.q && (
-                <button onClick={() => setSearchQ('')} className="absolute right-2 top-1/2 grid h-7 w-7 -translate-y-1/2 place-items-center rounded-full bg-ink/5 text-muted">
+                <button type="button" onClick={() => setSearchQ('')} className="absolute right-16 top-1/2 grid h-7 w-7 -translate-y-1/2 place-items-center rounded-full bg-ink/5 text-muted">
                   <X size={15} />
                 </button>
               )}
-            </div>
+              <button type="submit" aria-label="Ask AI" className="press absolute right-1.5 top-1/2 inline-flex -translate-y-1/2 items-center gap-1 rounded-xl btn-accent px-2.5 py-1.5 text-xs font-bold">
+                <Sparkles size={13} /> AI
+              </button>
+            </form>
             <button onClick={saveSearch} aria-label="Save search" className="press grid h-11 w-11 shrink-0 place-items-center rounded-2xl border border-hairline bg-surface text-ink">
               <Bookmark size={19} />
             </button>

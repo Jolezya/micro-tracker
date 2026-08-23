@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Search, Bell, Sun, Moon, MapPin, TrendingUp, Clock, Sparkles, ChevronRight } from 'lucide-react';
@@ -8,6 +8,8 @@ import { ListingCard, ListingCardSkeleton } from '../components/ListingCard.jsx'
 import { ListingImage } from '../components/ListingImage.jsx';
 import { CategoryIcon } from '../components/CategoryIcon.jsx';
 import { SectionHeader } from '../components/ui/kit.jsx';
+import { useToast } from '../components/ui/Toast.jsx';
+import { runNaturalSearch } from '../lib/nlSearch.js';
 import { CATEGORIES } from '../data/categories.js';
 import { CURRENT_USER } from '../data/users.js';
 import { distanceKm } from '../lib/format.js';
@@ -67,8 +69,18 @@ function HomeHeader() {
 export default function Home() {
   const navigate = useNavigate();
   const all = useAllListings();
-  const { state } = useStore();
+  const { state, dispatch } = useStore();
+  const { toast } = useToast();
   const { bind, indicator } = usePullToRefresh();
+  const [q, setQ] = useState('');
+
+  const submitSearch = () => {
+    const text = q.trim();
+    if (!text) { navigate('/search'); return; }
+    const res = runNaturalSearch(text, dispatch, navigate);
+    if (res.summary) toast(`AI found: ${res.summary}`, { type: 'info' });
+    setQ('');
+  };
 
   const trending = useMemo(() => [...all].sort((a, b) => b.views - a.views).slice(0, 10), [all]);
   const premium = useMemo(() => all.filter((l) => l.premium).slice(0, 10), [all]);
@@ -93,32 +105,37 @@ export default function Home() {
       {indicator}
       <HomeHeader />
 
-      <Container className="pt-4">
-        {/* Hero */}
+      <Container className="pt-3">
+        {/* Hero — compact, search-first */}
         <motion.div
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
         >
-          <p className="text-sm font-medium text-muted">
-            {greeting()} — find something you'll love
-          </p>
-          <h1 className="mt-1 text-3xl font-extrabold tracking-tight text-ink text-balance sm:text-4xl">
-            The premium marketplace, <span className="text-gradient">reimagined</span>.
+          <h1 className="text-2xl font-extrabold tracking-tight text-ink sm:text-3xl">
+            Zambia's smarter marketplace.
           </h1>
 
-          <button
-            onClick={() => navigate('/search')}
-            className="press mt-4 flex w-full items-center gap-3 rounded-2xl border border-hairline bg-surface px-4 py-3.5 text-left shadow-soft transition hover:shadow-lift"
+          <form
+            onSubmit={(e) => { e.preventDefault(); submitSearch(); }}
+            className="mt-3 flex items-center gap-2 rounded-2xl border border-hairline bg-surface p-1.5 pl-4 shadow-soft focus-within:shadow-lift"
           >
-            <Search size={20} className="text-faint" />
-            <span className="text-[15px] text-faint">Search cars, homes, watches…</span>
-            <span className="ml-auto inline-flex items-center gap-1 rounded-full bg-accent-soft px-2.5 py-1 text-xs font-bold text-accent">
-              <Sparkles size={12} /> AI
-            </span>
-          </button>
+            <Search size={20} className="shrink-0 text-faint" />
+            <input
+              value={q}
+              onChange={(e) => setQ(e.target.value)}
+              placeholder="Try “electric SUV in Lusaka under K2m”"
+              className="min-w-0 flex-1 bg-transparent py-2 text-[15px] text-ink outline-none placeholder:text-faint"
+            />
+            <button
+              type="submit"
+              className="press inline-flex shrink-0 items-center gap-1 rounded-xl btn-accent px-3 py-2 text-sm font-bold"
+            >
+              <Sparkles size={14} /> AI
+            </button>
+          </form>
           <div className="mt-2 flex items-center gap-1 px-1 text-xs text-faint">
-            <MapPin size={12} /> Showing results near {CURRENT_USER.location}
+            <MapPin size={12} /> Buy &amp; sell near {CURRENT_USER.location.split(',')[0]} · ask in your own words
           </div>
         </motion.div>
 

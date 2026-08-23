@@ -14,6 +14,7 @@
 
 import { CATEGORY_MAP } from '../data/categories.js';
 import { GLYPHS } from './glyphs.js';
+import { STOCK } from './stock.js';
 
 // Map a listing to a fine-grained product "kind": which glyph + label to show.
 export function resolveKind(listing) {
@@ -106,9 +107,9 @@ const ICON_FALLBACK = {
   motorcycles: 'bike', jobs: 'briefcase', services: 'wrench', business: 'store', everything: 'sparkles',
 };
 
-// Optional stock library (kind -> [urls]). Empty by default; a live deployment
-// (or `npm run` a fetch script) can populate this without touching the UI.
-export const CATEGORY_STOCK = {};
+// Bundled stock library (kind -> [urls]), auto-discovered from src/assets/stock.
+// Empty by default → branded placeholders. Drop images in to enable photography.
+export const CATEGORY_STOCK = STOCK;
 
 // Seller-first list of REAL photo URLs for a listing (may be empty).
 export function realPhotos(listing) {
@@ -186,16 +187,21 @@ export function galleryImages(listing) {
   return Array.from({ length: n }, (_, i) => placeholderDataUri(listing, { index: i }));
 }
 
-// Small badge set for a card (kept minimal to avoid crowding — max 2).
+// Badge hierarchy (max 2, no clutter):
+//   1 primary placement/plan signal  +  optional Verified trust signal
+//   priority: Boosted → Sponsored → Gold → Premium
 export function badgesFor(listing, seller) {
   const out = [];
-  if (listing.boostedUntil && listing.boostedUntil > Date.now()) out.push({ label: 'Boosted', kind: 'boosted' });
-  if (listing.sponsored) out.push({ label: 'Sponsored', kind: 'sponsored' });
+  const boosted = listing.boostedUntil && listing.boostedUntil > Date.now();
   const plan = listing.listingPlan;
-  if (plan === 'gold' || (!plan && listing.premium && listing.sponsored)) out.push({ label: 'Gold', kind: 'gold' });
-  else if (plan === 'premium' || (!plan && listing.premium)) out.push({ label: 'Premium', kind: 'premium' });
-  const hoursOld = (Date.now() - Date.parse(listing.postedAt)) / 3600000;
-  if (hoursOld <= 24) out.push({ label: 'New', kind: 'new' });
+  const isGold = plan === 'gold' || (!plan && listing.premium && listing.sponsored);
+  const isPremium = plan === 'premium' || (!plan && listing.premium);
+
+  if (boosted) out.push({ label: 'Boosted', kind: 'boosted' });
+  else if (listing.sponsored) out.push({ label: 'Sponsored', kind: 'sponsored' });
+  else if (isGold) out.push({ label: 'Gold', kind: 'gold' });
+  else if (isPremium) out.push({ label: 'Premium', kind: 'premium' });
+
   if (seller?.verified?.includes('id')) out.push({ label: 'Verified', kind: 'verified' });
   return out.slice(0, 2);
 }

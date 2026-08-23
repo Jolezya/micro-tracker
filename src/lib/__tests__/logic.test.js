@@ -6,6 +6,7 @@ import {
 import { LISTINGS } from '../../data/listings.js';
 import { schemaFor } from '../../data/filterSchema.js';
 import { planBenefits, boostReach, LISTING_PLANS, BOOST_OPTIONS } from '../../data/plans.js';
+import { parseQuery } from '../nlSearch.js';
 import { detectCategory, suggestPrice, suggestTitle, generateDescription, isDuplicate, fraudScore, recommend } from '../ai.js';
 import { kwacha, kwachaCompact, timeAgo, distanceKm, formatDistance, compactNumber, initials, formatPrice } from '../format.js';
 import { placeholderDataUri, resolveKind, coverPhoto, realPhotos } from '../media.js';
@@ -246,6 +247,44 @@ describe('category-aware filter framework', () => {
     expect(countActiveSchema(vSchema, values)).toBe(2);
     const list = activeFilterList(vSchema, values);
     expect(list.map((x) => x.def.key).sort()).toEqual(['make', 'price']);
+  });
+});
+
+describe('natural-language search', () => {
+  it('parses "used Toyota SUV under K500,000 in Lusaka"', () => {
+    const r = parseQuery('Find me a used Toyota SUV under K500,000 in Lusaka');
+    expect(r.category).toBe('vehicles');
+    expect(r.values.make).toEqual(['Toyota']);
+    expect(r.values.vehicleType).toEqual(['SUV']);
+    expect(r.values.condition).toEqual(['Used']);
+    expect(r.values.price).toEqual({ min: null, max: 500000 });
+    expect(r.values.location).toEqual({ town: 'Lusaka' });
+  });
+
+  it('parses a price range and fuel', () => {
+    const r = parseQuery('electric BMW between K1,000,000 and K2,000,000');
+    expect(r.category).toBe('vehicles');
+    expect(r.values.fuel).toEqual(['Electric']);
+    expect(r.values.make).toEqual(['BMW']);
+    expect(r.values.price).toEqual({ min: 1000000, max: 2000000 });
+  });
+
+  it('maps common electronics products to brand + type', () => {
+    const r = parseQuery('refurbished iPhone under 20k');
+    expect(r.category).toBe('electronics');
+    expect(r.values.brand).toEqual(['Apple']);
+    expect(r.values.type).toEqual(['Phones']);
+    expect(r.values.condition).toEqual(['Refurbished']);
+    expect(r.values.price).toEqual({ min: null, max: 20000 });
+  });
+
+  it('parses property bedrooms + town + near-me', () => {
+    const r = parseQuery('3 bedroom house for rent in Kitwe');
+    expect(r.category).toBe('property');
+    expect(r.values.bedrooms).toEqual({ min: 3, max: null });
+    expect(r.values.listingKind).toEqual(['For Rent']);
+    expect(r.values.location).toEqual({ town: 'Kitwe' });
+    expect(parseQuery('sofa near me').values.location).toEqual({ nearMe: true });
   });
 });
 

@@ -20,7 +20,7 @@ export function CategoryPlaceholder({ listing, showLabel = false, glyphSize = 44
     <div
       className={`relative flex h-full w-full items-center justify-center overflow-hidden ${className}`}
       style={{
-        background: `linear-gradient(${angle}deg, rgba(${r},${g},${b},0.09), rgba(${r},${g},${b},0.20))`,
+        background: `linear-gradient(${angle}deg, rgba(${r},${g},${b},0.06), rgba(${r},${g},${b},0.13))`,
       }}
     >
       {/* soft studio tile behind the glyph */}

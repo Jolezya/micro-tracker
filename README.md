@@ -17,6 +17,10 @@ from a single codebase. Add it to your home screen and it behaves like a native 
 
 ## ✨ Highlights
 
+- **Natural-language AI search** — the search bar understands plain queries like *"used Toyota SUV
+  under K500,000 in Lusaka"* and turns them into real filters (category, make/model, type, fuel,
+  condition, price, location) via `lib/nlSearch.js`, shown as removable chips. The AI button is a
+  real capability, not decoration.
 - **Category-aware search & filters** — a reusable, schema-driven filter framework (`data/filterSchema.js`):
   each category defines its own filters (Vehicles get make→model, fuel, transmission, year, mileage…;
   Property gets bedrooms, furnished, pool…; Land drops "condition" for plot size / title deed / services;
