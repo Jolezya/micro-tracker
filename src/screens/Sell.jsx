@@ -15,7 +15,7 @@ import { CURRENT_USER } from '../data/users.js';
 import { LISTING_PLANS, LISTING_PLAN_MAP } from '../data/plans.js';
 import { TOWNS_BY_PROVINCE, locationOf } from '../data/locations.js';
 import { useAllListings, useStore } from '../lib/store.jsx';
-import { gradientArt } from '../lib/images.js';
+import { placeholderDataUri } from '../lib/media.js';
 import { detectCategory, suggestTitle, suggestPrice, generateDescription } from '../lib/ai.js';
 import { kr } from '../lib/format.js';
 
@@ -326,7 +326,8 @@ function PhotoStep({ form, set, plan, tint, enhancing, setEnhancing, toast }) {
       toast(`${plan.name} allows up to ${limit} photos`, { type: 'info' });
       return;
     }
-    set({ photos: [...form.photos, { id: uid(), src: gradientArt(`sell-${Date.now()}-${count}`, tint) }] });
+    const pseudo = { id: `${form.category || 'x'}-${Date.now()}`, category: form.category, subcategory: form.subcategory, attrs: {} };
+    set({ photos: [...form.photos, { id: uid(), src: placeholderDataUri(pseudo, { index: count }) }] });
   };
   const remove = (id) => set({ photos: form.photos.filter((p) => p.id !== id) });
   const makeCover = (id) => {
@@ -431,11 +432,43 @@ function PhotoStep({ form, set, plan, tint, enhancing, setEnhancing, toast }) {
         </div>
       )}
 
-      <div className="mt-4 flex items-start gap-2 rounded-2xl bg-accent-soft p-3 text-sm text-accent">
-        <Sparkles size={16} className="mt-0.5 shrink-0" />
-        <p>Kaira brightens your photos automatically and checks for duplicates as you add them.</p>
-      </div>
+      {/* AI photo assistant */}
+      {count > 0 && (
+        <div className="mt-4 rounded-2xl border border-hairline bg-surface p-3.5">
+          <div className="mb-2 flex items-center gap-2">
+            <span className="grid h-7 w-7 place-items-center rounded-lg bg-accent text-accent-ink"><Wand2 size={15} /></span>
+            <p className="text-sm font-bold text-ink">AI photo check</p>
+            <span className="ml-auto text-xs font-semibold text-success">{enhancing ? 'Analysing…' : 'Looks good'}</span>
+          </div>
+          <ul className="space-y-1.5 text-sm">
+            <CheckRow ok>Lighting enhanced automatically</CheckRow>
+            <CheckRow ok>No blurry photos detected</CheckRow>
+            <CheckRow ok>No duplicates found</CheckRow>
+            <CheckRow ok>Cover photo recommended (photo 1)</CheckRow>
+            {count < 3 ? (
+              <CheckRow warn>Add {3 - count} more angle{3 - count === 1 ? '' : 's'} to build buyer trust</CheckRow>
+            ) : (
+              <CheckRow ok>Great range of angles</CheckRow>
+            )}
+          </ul>
+          <p className="mt-2.5 flex items-start gap-1.5 text-xs text-muted">
+            <Sparkles size={13} className="mt-0.5 shrink-0 text-accent" />
+            On the next step, AI reads your photos &amp; details to suggest a title, category and price.
+          </p>
+        </div>
+      )}
     </div>
+  );
+}
+
+function CheckRow({ ok, warn, children }) {
+  return (
+    <li className="flex items-center gap-2">
+      <span className={`grid h-5 w-5 shrink-0 place-items-center rounded-full ${warn ? 'bg-warning/15 text-warning' : 'bg-success/15 text-success'}`}>
+        {warn ? <Info size={12} /> : <Check size={12} strokeWidth={3} />}
+      </span>
+      <span className={warn ? 'text-warning' : 'text-muted'}>{children}</span>
+    </li>
   );
 }
 

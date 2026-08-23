@@ -101,7 +101,8 @@ src/
     ai.js          # category detection, pricing, gen text, fraud/dup, recommend
     search.js      # pure filter + sort engine
     format.js      # currency, time-ago, distance, numbers
-    images.js      # generative mesh-gradient listing imagery
+    media.js       # image resolution: seller → real → branded placeholder
+    glyphs.js      # product glyph SVGs (extracted from lucide)
     usePullToRefresh.jsx
   components/
     ui/            # Button, Badge, Chip, Avatar, Sheet, Modal, Toast, Switch…
@@ -115,16 +116,28 @@ src/
 
 ---
 
-## 🖼️ A note on listing photography
+## 🖼️ Imagery
 
-The environment this was built in blocks external image CDNs, and the app is offline-first, so listing
-images are produced by a **generative system** (`src/lib/images.js`): deterministic, premium
-mesh-gradient art, tinted per category and unique per photo. It always looks intentional and never
-breaks.
+Every listing resolves its cover through one media layer (`src/lib/media.js`) with a strict priority
+order — **seller photos always win**:
 
-To use real photography, give any listing a `photos: ["https://…", …]` array — `<SmartImage>` tries
-those first and gracefully falls back to the generator on error. Remote images are also runtime-cached
-by the service worker for offline viewing.
+1. `listing.photos[]` — seller-uploaded images
+2. `listing.imageUrls[]` — real category photography (the production seam)
+3. `CATEGORY_STOCK[kind]` — a bundled/remote stock library, if configured
+4. A **branded, category-specific placeholder** — a tasteful, brand-tinted "studio" tile showing the
+   product's icon (car, house, phone, sneaker, dog, plot…), never a random gradient.
+
+The placeholder is self-contained, so the app looks polished offline and in previews, while real
+photography slots in for a live deployment **without any UI changes**.
+
+**To add real photos:** give listings an `imageUrls: ["https://…"]` array (or seller `photos`), or
+drop files in `public/` and populate `CATEGORY_STOCK` in `media.js`. `<SmartImage>` progressively
+loads each photo (blur-up + skeleton) and falls back to the branded placeholder on error; the service
+worker runtime-caches remote images for offline viewing.
+
+> Note: the build sandbox blocks all image CDNs, so this repo ships with branded placeholders and the
+> real-photo seam ready — a normal web deployment (where the browser can reach an image host) or a
+> bundled `public/` image pack turns on photography everywhere.
 
 ---
 

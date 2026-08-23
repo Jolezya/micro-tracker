@@ -5,6 +5,7 @@ import { Search, Bell, Sun, Moon, MapPin, TrendingUp, Clock, Sparkles, ChevronRi
 import { Container } from '../components/layout/Header.jsx';
 import { Logo } from '../components/layout/Logo.jsx';
 import { ListingCard, ListingCardSkeleton } from '../components/ListingCard.jsx';
+import { ListingImage } from '../components/ListingImage.jsx';
 import { CategoryIcon } from '../components/CategoryIcon.jsx';
 import { SectionHeader } from '../components/ui/kit.jsx';
 import { CATEGORIES } from '../data/categories.js';
@@ -123,24 +124,25 @@ export default function Home() {
 
         {/* Categories */}
         <div className="mt-6">
+          <SectionHeader title="Browse categories" />
           <Rail>
-            {CATEGORIES.map((c) => (
-              <Link
-                key={c.id}
-                to={`/category/${c.id}`}
-                className="press flex w-[76px] shrink-0 flex-col items-center gap-2"
-              >
-                <span
-                  className="grid h-16 w-16 place-items-center rounded-2xl border border-hairline"
-                  style={{ background: `${c.color}14`, color: c.color }}
-                >
-                  <CategoryIcon name={c.icon} size={24} strokeWidth={2} />
-                </span>
-                <span className="text-center text-[11px] font-semibold leading-tight text-muted">
-                  {c.label}
-                </span>
-              </Link>
-            ))}
+            {CATEGORIES.map((c) => {
+              const rep = all.find((l) => l.category === c.id) || { id: c.id, category: c.id };
+              return (
+                <Link key={c.id} to={`/category/${c.id}`} className="press w-28 shrink-0">
+                  <div className="relative aspect-[4/3] w-full overflow-hidden rounded-2xl">
+                    <ListingImage listing={rep} className="h-full w-full" glyphSize={30} minimal />
+                    <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/55 via-black/5 to-transparent" />
+                    <div className="absolute inset-x-0 bottom-0 flex items-center gap-1.5 p-2">
+                      <span className="grid h-5 w-5 place-items-center rounded-md bg-white/25 text-white backdrop-blur-sm">
+                        <CategoryIcon name={c.icon} size={12} />
+                      </span>
+                      <span className="text-xs font-bold text-white drop-shadow">{c.label}</span>
+                    </div>
+                  </div>
+                </Link>
+              );
+            })}
           </Rail>
         </div>
 

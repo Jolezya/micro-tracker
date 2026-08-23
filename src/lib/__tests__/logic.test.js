@@ -7,7 +7,7 @@ import { LISTINGS } from '../../data/listings.js';
 import { schemaFor } from '../../data/filterSchema.js';
 import { detectCategory, suggestPrice, suggestTitle, generateDescription, isDuplicate, fraudScore, recommend } from '../ai.js';
 import { kwacha, kwachaCompact, timeAgo, distanceKm, formatDistance, compactNumber, initials, formatPrice } from '../format.js';
-import { gradientArt } from '../images.js';
+import { placeholderDataUri, resolveKind, coverPhoto, realPhotos } from '../media.js';
 import { TOWNS_FULL, TOWN_NAMES, findTown, townCoords, locationOf, PROVINCES } from '../../data/locations.js';
 
 const NOW = Date.parse('2026-08-05T09:00:00Z');
@@ -248,13 +248,32 @@ describe('category-aware filter framework', () => {
   });
 });
 
-describe('images', () => {
-  it('generates a deterministic svg data uri', () => {
-    const a = gradientArt('seed-1', '#0f6c54');
-    const b = gradientArt('seed-1', '#0f6c54');
-    const c = gradientArt('seed-2', '#0f6c54');
+describe('media layer', () => {
+  const tesla = LISTINGS.find((l) => l.id === 'l_tesla_y');
+  const phone = LISTINGS.find((l) => l.id === 'l_iphone');
+  const dog = LISTINGS.find((l) => l.id === 'l_dog');
+  const plot = LISTINGS.find((l) => l.id === 'l_plot_lusaka');
+
+  it('resolves category-specific product glyphs', () => {
+    expect(resolveKind(tesla).glyph).toBe('car');
+    expect(resolveKind(phone).glyph).toBe('smartphone');
+    expect(resolveKind(dog).glyph).toBe('dog');
+    expect(resolveKind(plot).glyph).toBe('trees');
+  });
+
+  it('prioritises seller photos over placeholders', () => {
+    const withPhoto = { ...phone, photos: ['https://example.com/a.jpg'] };
+    expect(coverPhoto(withPhoto)).toBe('https://example.com/a.jpg');
+    expect(realPhotos(phone)).toEqual([]); // no seller/real photos → placeholder path
+    expect(coverPhoto(phone)).toBeNull();
+  });
+
+  it('generates a deterministic, category-tinted placeholder data uri', () => {
+    const a = placeholderDataUri(tesla);
+    const b = placeholderDataUri(tesla);
+    const c = placeholderDataUri(phone);
     expect(a).toMatch(/^data:image\/svg\+xml,/);
-    expect(a).toBe(b); // deterministic
-    expect(a).not.toBe(c); // varies by seed
+    expect(a).toBe(b); // deterministic per listing
+    expect(a).not.toBe(c); // varies by listing/kind
   });
 });

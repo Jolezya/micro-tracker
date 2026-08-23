@@ -10,8 +10,7 @@ import { Sheet } from '../components/ui/Sheet.jsx';
 import { useToast } from '../components/ui/Toast.jsx';
 import { useAllListings, useStore } from '../lib/store.jsx';
 import { getUser } from '../data/users.js';
-import { CATEGORY_MAP } from '../data/categories.js';
-import { listingCover } from '../lib/images.js';
+import { ListingImage } from '../components/ListingImage.jsx';
 import { formatPrice, kwacha } from '../lib/format.js';
 
 const REPLIES = [
@@ -53,7 +52,6 @@ export default function Chat() {
 
   const seller = conv ? getUser(conv.sellerId) : null;
   const listing = conv ? all.find((l) => l.id === conv.listingId) : null;
-  const tint = listing ? CATEGORY_MAP[listing.category]?.color : '#0f6c54';
 
   // Mark read + scroll on open / new messages
   useEffect(() => {
@@ -121,8 +119,8 @@ export default function Chat() {
         {/* Pinned listing */}
         {listing && (
           <Link to={`/listing/${listing.id}`} className="mx-auto flex max-w-3xl items-center gap-3 border-t border-hairline px-4 py-2">
-            <div className="h-11 w-11 shrink-0">
-              <SmartImage src={listingCover(listing, tint)} alt={listing.title} className="h-full w-full" rounded="rounded-lg" />
+            <div className="h-11 w-11 shrink-0 overflow-hidden rounded-lg">
+              <ListingImage listing={listing} className="h-full w-full" glyphSize={18} minimal />
             </div>
             <div className="min-w-0 flex-1">
               <p className="truncate text-sm font-semibold text-ink">{listing.title}</p>

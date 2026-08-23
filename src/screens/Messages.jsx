@@ -2,12 +2,10 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import { MessageCircle, Search } from 'lucide-react';
 import { ScreenHeader, Container } from '../components/layout/Header.jsx';
-import { SmartImage } from '../components/SmartImage.jsx';
+import { ListingImage } from '../components/ListingImage.jsx';
 import { Avatar, EmptyState, Button } from '../components/ui/kit.jsx';
 import { useAllListings, useStore } from '../lib/store.jsx';
 import { getUser } from '../data/users.js';
-import { CATEGORY_MAP } from '../data/categories.js';
-import { listingCover } from '../lib/images.js';
 import { timeAgo } from '../lib/format.js';
 
 export default function Messages() {
@@ -37,7 +35,6 @@ export default function Messages() {
               const seller = getUser(c.sellerId);
               const listing = all.find((l) => l.id === c.listingId);
               const last = c.messages[c.messages.length - 1];
-              const tint = listing ? CATEGORY_MAP[listing.category]?.color : '#0f6c54';
               return (
                 <Link
                   key={c.id}
@@ -65,8 +62,8 @@ export default function Messages() {
                     </div>
                   </div>
                   {listing && (
-                    <div className="h-12 w-12 shrink-0">
-                      <SmartImage src={listingCover(listing, tint)} alt={listing.title} className="h-full w-full" rounded="rounded-xl" />
+                    <div className="h-12 w-12 shrink-0 overflow-hidden rounded-xl">
+                      <ListingImage listing={listing} className="h-full w-full" glyphSize={18} minimal />
                     </div>
                   )}
                 </Link>

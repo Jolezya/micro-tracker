@@ -15,7 +15,7 @@ import { useToast } from '../components/ui/Toast.jsx';
 import { useAllListings, useStore } from '../lib/store.jsx';
 import { getUser } from '../data/users.js';
 import { CATEGORY_MAP } from '../data/categories.js';
-import { listingPhotos } from '../lib/images.js';
+import { galleryImages } from '../lib/media.js';
 import { formatPrice, timeAgo, memberSince, distanceKm, formatDistance, compactNumber } from '../lib/format.js';
 import { recommend, fraudScore } from '../lib/ai.js';
 import { CURRENT_USER } from '../data/users.js';
@@ -37,7 +37,7 @@ export default function ListingDetail() {
 
   const cat = listing ? CATEGORY_MAP[listing.category] : null;
   const tint = cat?.color || '#0f6c54';
-  const photos = useMemo(() => (listing ? listingPhotos(listing, tint) : []), [listing]);
+  const photos = useMemo(() => (listing ? galleryImages(listing) : []), [listing]);
   const related = useMemo(() => (listing ? recommend(listing, all) : []), [listing, all]);
   const trust = useMemo(() => (listing ? fraudScore(listing, all) : null), [listing, all]);
 

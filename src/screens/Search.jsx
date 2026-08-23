@@ -27,6 +27,7 @@ const VIEW_OPTIONS = [
   { value: 'map', label: 'Map', icon: <Map size={15} /> },
 ];
 const ORIGIN = CURRENT_USER;
+const EMPTY = {}; // stable reference for "no filters"
 
 export default function Search() {
   const { categoryId } = useParams();
@@ -46,8 +47,8 @@ export default function Search() {
   const [quickKey, setQuickKey] = useState(null); // open a single quick filter
   const [showSort, setShowSort] = useState(false);
 
-  // committed filter values for this category
-  const values = search.filters[catKey] || {};
+  // committed filter values for this category (stable ref to avoid render thrash)
+  const values = useMemo(() => search.filters[catKey] || EMPTY, [search.filters, catKey]);
 
   // one-time seed of the query from ?q=
   useEffect(() => {
