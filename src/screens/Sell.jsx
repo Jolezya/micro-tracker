@@ -17,6 +17,7 @@ import { PlanBenefitList } from '../components/plan/PlanUI.jsx';
 import { TOWNS_BY_PROVINCE, locationOf } from '../data/locations.js';
 import { useAllListings, useStore } from '../lib/store.jsx';
 import { placeholderDataUri } from '../lib/media.js';
+import { readManyImages } from '../lib/imageFile.js';
 import { detectCategory, suggestTitle, suggestPrice, generateDescription } from '../lib/ai.js';
 import { kr } from '../lib/format.js';
 
@@ -319,12 +320,33 @@ function Fact({ children }) {
 function PhotoStep({ form, set, plan, tint, enhancing, setEnhancing, toast }) {
   const count = form.photos.length;
   const limit = plan.photoLimit;
+  const fileRef = useRef(null);
+  const [busy, setBusy] = useState(false);
 
-  const addPhoto = () => {
+  const pickFiles = () => {
     if (count >= limit) {
       toast(`${plan.name} allows up to ${limit} photos`, { type: 'info' });
       return;
     }
+    fileRef.current?.click();
+  };
+  const onFiles = async (e) => {
+    const files = e.target.files;
+    if (!files?.length) return;
+    setBusy(true);
+    const remaining = limit - count;
+    const srcs = await readManyImages(files, remaining);
+    if (srcs.length) {
+      set({ photos: [...form.photos, ...srcs.map((src) => ({ id: uid(), src, real: true }))] });
+      toast(`${srcs.length} photo${srcs.length === 1 ? '' : 's'} added`);
+    } else {
+      toast('Please choose image files', { type: 'error' });
+    }
+    setBusy(false);
+    e.target.value = ''; // allow re-selecting the same file
+  };
+  const addSample = () => {
+    if (count >= limit) return;
     const pseudo = { id: `${form.category || 'x'}-${Date.now()}`, category: form.category, subcategory: form.subcategory, attrs: {} };
     set({ photos: [...form.photos, { id: uid(), src: placeholderDataUri(pseudo, { index: count }) }] });
   };
@@ -365,17 +387,22 @@ function PhotoStep({ form, set, plan, tint, enhancing, setEnhancing, toast }) {
         </div>
       </div>
 
+      {/* hidden native file picker — real device photos */}
+      <input ref={fileRef} type="file" accept="image/*" multiple className="hidden" onChange={onFiles} />
+
       {/* reorderable strip */}
       <div className="mt-4">
         {count === 0 ? (
           <button
-            onClick={addPhoto}
+            onClick={pickFiles}
             className="press grid aspect-[4/3] w-full place-items-center rounded-3xl border-2 border-dashed border-line/25 bg-surface text-muted"
           >
             <div className="flex flex-col items-center gap-2">
-              <span className="grid h-14 w-14 place-items-center rounded-2xl bg-accent-soft text-accent"><ImagePlus size={26} /></span>
-              <span className="font-semibold text-ink">Add your first photo</span>
-              <span className="text-xs">Tap to add</span>
+              <span className="grid h-14 w-14 place-items-center rounded-2xl bg-accent-soft text-accent">
+                {busy ? <Spinner size={22} /> : <ImagePlus size={26} />}
+              </span>
+              <span className="font-semibold text-ink">Add your photos</span>
+              <span className="text-xs">Choose real images from your device</span>
             </div>
           </button>
         ) : (
@@ -406,14 +433,19 @@ function PhotoStep({ form, set, plan, tint, enhancing, setEnhancing, toast }) {
               ))}
             </Reorder.Group>
             {count < limit && (
-              <button onClick={addPhoto} className="press grid h-32 w-28 shrink-0 place-items-center rounded-2xl border-2 border-dashed border-line/25 bg-surface text-muted">
+              <button onClick={pickFiles} className="press grid h-32 w-28 shrink-0 place-items-center rounded-2xl border-2 border-dashed border-line/25 bg-surface text-muted">
                 <div className="flex flex-col items-center gap-1">
-                  <ImagePlus size={24} />
+                  {busy ? <Spinner size={20} /> : <ImagePlus size={24} />}
                   <span className="text-xs font-semibold">Add</span>
                 </div>
               </button>
             )}
           </div>
+        )}
+        {count === 0 && (
+          <button onClick={addSample} className="press mt-2 text-xs font-semibold text-faint">
+            or add a sample placeholder
+          </button>
         )}
       </div>
 
@@ -425,7 +457,7 @@ function PhotoStep({ form, set, plan, tint, enhancing, setEnhancing, toast }) {
           <Button variant="outline" size="sm" onClick={() => toast('Crop applied')}>
             <Crop size={15} /> Crop
           </Button>
-          <Button variant="outline" size="sm" onClick={addPhoto}>
+          <Button variant="outline" size="sm" onClick={pickFiles}>
             <Camera size={15} /> Add more
           </Button>
         </div>
