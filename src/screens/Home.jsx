@@ -29,6 +29,60 @@ function Rail({ children }) {
   );
 }
 
+// One category tile: premium 3D icon + readable name, fixed width so the two
+// carousel rows line up into columns and touch targets stay consistent.
+function CategoryTile({ c, size = 48 }) {
+  return (
+    <Link
+      to={`/category/${c.id}`}
+      aria-label={c.label}
+      className="press group flex w-[68px] shrink-0 flex-col items-center gap-1.5 text-center sm:w-auto"
+    >
+      <Category3DIcon category={c} size={size} className="transition-transform group-hover:-translate-y-0.5" />
+      <span className="line-clamp-2 text-[11px] font-semibold leading-tight text-ink">{c.label}</span>
+    </Link>
+  );
+}
+
+// Mobile: exactly two rows, horizontally scrollable (swipe for more) with a
+// subtle right-edge fade as the only "more exists" cue. md+: a compact static
+// grid — all categories fit, so no carousel is forced.
+function CategoryCarousel() {
+  const mid = Math.ceil(CATEGORIES.length / 2);
+  const rows = [CATEGORIES.slice(0, mid), CATEGORIES.slice(mid)];
+  return (
+    <>
+      {/* Mobile carousel */}
+      <div className="relative md:hidden">
+        <div className="no-scrollbar -mx-4 overflow-x-auto scroll-px-4 px-4">
+          <div className="flex w-max flex-col gap-4 pb-1">
+            {rows.map((row, i) => (
+              <div key={i} className="flex gap-3">
+                {row.map((c) => (
+                  <CategoryTile key={c.id} c={c} />
+                ))}
+              </div>
+            ))}
+          </div>
+        </div>
+        {/* subtle right-edge fade → hints more categories to the right */}
+        <div
+          aria-hidden
+          className="pointer-events-none absolute inset-y-0 right-0 w-10"
+          style={{ background: 'linear-gradient(to right, rgb(var(--bg) / 0), rgb(var(--bg)))' }}
+        />
+      </div>
+
+      {/* md+ compact grid — no carousel when everything fits */}
+      <div className="mt-1 hidden grid-cols-7 gap-x-2 gap-y-4 md:grid">
+        {CATEGORIES.map((c) => (
+          <CategoryTile key={c.id} c={c} />
+        ))}
+      </div>
+    </>
+  );
+}
+
 function HomeHeader() {
   const navigate = useNavigate();
   const { state, dispatch } = useStore();
@@ -139,22 +193,12 @@ export default function Home() {
           </div>
         </motion.div>
 
-        {/* Categories — compact premium icon directory */}
+        {/* Categories — compact premium directory.
+            Mobile: two-row horizontal carousel (swipe for more).
+            md+: static grid — everything fits, no carousel needed. */}
         <div className="mt-6">
           <SectionHeader title="Browse categories" />
-          <div className="mt-1 grid grid-cols-4 gap-x-2 gap-y-5 min-[400px]:grid-cols-5 sm:grid-cols-6 lg:grid-cols-8">
-            {CATEGORIES.map((c) => (
-              <Link
-                key={c.id}
-                to={`/category/${c.id}`}
-                aria-label={c.label}
-                className="press group flex flex-col items-center gap-2 text-center"
-              >
-                <Category3DIcon category={c} className="transition-transform group-hover:-translate-y-0.5" />
-                <span className="line-clamp-2 text-[11.5px] font-semibold leading-tight text-ink">{c.label}</span>
-              </Link>
-            ))}
-          </div>
+          <CategoryCarousel />
         </div>
 
         {/* Recently viewed */}
