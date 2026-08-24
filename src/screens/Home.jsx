@@ -175,15 +175,11 @@ export default function Home() {
               <Sparkles size={14} /> AI
             </button>
           </form>
-          <div className="mt-2 flex items-center gap-1 px-1 text-xs text-faint">
-            <MapPin size={12} /> Buy &amp; sell near {CURRENT_USER.location.split(',')[0]} · ask in your own words
-          </div>
         </motion.div>
 
-        {/* Categories — compact premium directory.
-            Mobile: two-row horizontal carousel (swipe for more).
-            md+: static grid — everything fits, no carousel needed. */}
-        <div className="mt-6">
+        {/* Categories — compact two-row grid, sitting close under the search
+            bar so search + categories read as one primary discovery area. */}
+        <div className="mt-4">
           <SectionHeader title="Browse categories" />
           <CategoryGrid />
         </div>
