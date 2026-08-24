@@ -28,6 +28,12 @@
   --glass-bg: 255 255 255;
   --glass-alpha: 0.66;
   --shadow-color: 20 24 30;
+
+  /* Zambian flag accents — used sparingly on the home headline */
+  --zm-green: 25 138 0;
+  --zm-red: 222 32 16;
+  --zm-black: 17 17 20;
+  --zm-orange: 239 125 0;
 }
 
 :root[data-theme='dark'] {
@@ -50,6 +56,13 @@
   --glass-bg: 24 27 32;
   --glass-alpha: 0.62;
   --shadow-color: 0 0 0;
+
+  /* Flag accents lifted for contrast on dark; the black stripe inverts so it
+     stays visible against the dark background. */
+  --zm-green: 56 182 44;
+  --zm-red: 240 96 82;
+  --zm-black: 236 237 241;
+  --zm-orange: 247 152 40;
 }
 
 * {

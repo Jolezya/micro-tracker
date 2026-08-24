@@ -184,7 +184,17 @@ export default function Home() {
           className="max-w-2xl"
         >
           <h1 className="text-2xl font-extrabold tracking-tight text-ink sm:text-3xl">
-            Zambia's smarter marketplace.
+            {/* national colours, used once: the word in flag green over the
+                flag's red · black · orange stripes */}
+            <span className="relative inline-block" style={{ color: 'rgb(var(--zm-green))' }}>
+              Zambia's
+              <span aria-hidden className="absolute inset-x-0 -bottom-0.5 flex h-[3px] overflow-hidden rounded-full">
+                <span className="flex-1" style={{ background: 'rgb(var(--zm-red))' }} />
+                <span className="flex-1" style={{ background: 'rgb(var(--zm-black))' }} />
+                <span className="flex-1" style={{ background: 'rgb(var(--zm-orange))' }} />
+              </span>
+            </span>{' '}
+            smarter marketplace.
           </h1>
 
           <form
