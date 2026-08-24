@@ -22,19 +22,7 @@ export function ListingField({ field, value, onChange, values, onCustom }) {
     case 'select':
       return <SelectOne field={field} value={value || ''} onChange={onChange} values={values} onCustom={onCustom} />;
     case 'number':
-      return (
-        <div className="flex items-center rounded-2xl border border-hairline bg-surface px-4">
-          <input
-            type="number"
-            inputMode="numeric"
-            value={value ?? ''}
-            onChange={(e) => onChange(e.target.value)}
-            placeholder={field.placeholder || '0'}
-            className="h-12 w-full bg-transparent text-ink outline-none placeholder:text-faint"
-          />
-          {field.unit && <span className="pl-2 text-sm font-semibold text-faint">{field.unit}</span>}
-        </div>
-      );
+      return <NumberInput field={field} value={value} onChange={onChange} />;
     case 'text':
       return (
         <input
@@ -63,6 +51,44 @@ export function ListingField({ field, value, onChange, values, onCustom }) {
     default:
       return null;
   }
+}
+
+// Quantities are never negative and never in exponent form. Strip anything that
+// isn't a plain number as it's typed, then clamp to the field's range on blur —
+// clamping while typing would fight the user (typing "19" for 1998 would jump).
+export const sanitizeNumber = (s) =>
+  String(s ?? '').replace(/[^\d.]/g, '').replace(/(\.[^.]*)\./g, '$1');
+
+export function clampToField(field, raw) {
+  if (raw === '' || raw == null) return '';
+  const n = Number(raw);
+  if (!Number.isFinite(n)) return '';
+  let v = n;
+  if (field?.min != null && v < field.min) v = field.min;
+  if (field?.max != null && v > field.max) v = field.max;
+  return String(v);
+}
+
+function NumberInput({ field, value, onChange }) {
+  return (
+    <div className="flex items-center rounded-2xl border border-hairline bg-surface px-4">
+      <input
+        type="number"
+        inputMode="decimal"
+        min={field.min ?? 0}
+        max={field.max}
+        value={value ?? ''}
+        onChange={(e) => onChange(sanitizeNumber(e.target.value))}
+        onBlur={(e) => {
+          const clamped = clampToField(field, sanitizeNumber(e.target.value));
+          if (clamped !== String(value ?? '')) onChange(clamped);
+        }}
+        placeholder={field.placeholder || '0'}
+        className="h-12 w-full bg-transparent text-ink outline-none placeholder:text-faint"
+      />
+      {field.unit && <span className="pl-2 text-sm font-semibold text-faint">{field.unit}</span>}
+    </div>
+  );
 }
 
 // ---------------- Searchable single-select with custom value ----------------

@@ -458,6 +458,26 @@ describe('listing schema engine', () => {
     expect(tv).toContain('screenSize');
   });
 
+  it('satisfies required fields routed to subcategory (regression: unpublishable categories)', () => {
+    // electronics/fashion/pets/services route a REQUIRED field to `subcategory`.
+    // If the caller passes subcategory: null those categories can never publish.
+    for (const [cat, key, val] of [
+      ['electronics', 'type', 'Phones'],
+      ['fashion', 'type', 'Shoes'],
+      ['pets', 'type', 'Dogs'],
+      ['services', 'serviceCategory', 'Moving'],
+    ]) {
+      const schema = listingSchema(cat);
+      const field = schema.fields.find((f) => f.key === key);
+      expect(field.top).toBe('subcategory');
+      expect(field.required).toBe(true);
+      // unset → reported missing
+      expect(missingRequired(schema, {}, { subcategory: null })).toContain(field.label);
+      // set → satisfied once the caller derives subcategory from the field
+      expect(missingRequired(schema, { [key]: [val] }, { subcategory: val })).not.toContain(field.label);
+    }
+  });
+
   it('reports missing required fields across top-level and attr keys', () => {
     const schema = listingSchema('vehicles');
     const missing = missingRequired(schema, {}, {});

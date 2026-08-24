@@ -163,7 +163,7 @@ export function Segmented({ options, value, onChange, className = '' }) {
           <button
             key={o.value}
             onClick={() => onChange(o.value)}
-            className="relative flex-1 rounded-full px-3 py-1.5 text-sm font-semibold transition"
+            className="relative min-w-0 flex-1 rounded-full px-3 py-1.5 text-sm font-semibold transition"
           >
             {active && (
               <motion.span
@@ -172,9 +172,9 @@ export function Segmented({ options, value, onChange, className = '' }) {
                 transition={{ type: 'spring', stiffness: 500, damping: 40 }}
               />
             )}
-            <span className={`relative z-10 flex items-center justify-center gap-1.5 ${active ? 'text-ink' : 'text-muted'}`}>
+            <span className={`relative z-10 flex min-w-0 items-center justify-center gap-1.5 ${active ? 'text-ink' : 'text-muted'}`}>
               {o.icon}
-              {o.label}
+              <span className="truncate">{o.label}</span>
             </span>
           </button>
         );

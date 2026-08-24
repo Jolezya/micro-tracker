@@ -16,7 +16,7 @@ import { LISTING_PLANS, LISTING_PLAN_MAP } from '../data/plans.js';
 import { listingSchema, visibleFields, missingRequired, photoRule } from '../data/listingSchema.js';
 import { PlanBenefitList } from '../components/plan/PlanUI.jsx';
 import { OptionChips } from '../components/filters/OptionChips.jsx';
-import { ListingField } from '../components/listing/ListingField.jsx';
+import { ListingField, sanitizeNumber, clampToField } from '../components/listing/ListingField.jsx';
 import { TOWNS_BY_PROVINCE, locationOf } from '../data/locations.js';
 import { useStore } from '../lib/store.jsx';
 import { placeholderDataUri } from '../lib/media.js';
@@ -28,6 +28,9 @@ import { kr } from '../lib/format.js';
 const STEPS = ['Category', 'Plan', 'Photos', 'Details', 'Review'];
 const DELIVERY_OPTIONS = ['Pickup', 'Delivery in town', 'Meet in public place', 'Courier nationwide'];
 const REC_PHOTOS = 5;
+// Guard rails so invalid data can't silently create a broken listing.
+const TITLE_MAX = 80;
+const PRICE_MAX = 1e11; // K100bn — far above any real listing, blocks absurd values
 const uid = () => `p_${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
 const single = (v) => (Array.isArray(v) ? v[0] : v);
 
@@ -65,6 +68,15 @@ export default function Sell() {
 
   const brand = single(form.fv.make) || single(form.fv.brand) || null;
   const condition = single(form.fv.condition) || null;
+  // A schema field routes its value to a top-level listing key via `top`, and
+  // which field does that varies by category (electronics `type`, services
+  // `serviceCategory`, …). Derive it from the schema instead of assuming a
+  // fixed key — otherwise required `top: 'subcategory'` fields can never be
+  // satisfied and the category becomes impossible to publish.
+  const subcategory = useMemo(() => {
+    const f = schema.fields.find((x) => x.top === 'subcategory');
+    return (f && single(form.fv[f.key])) || null;
+  }, [schema, form.fv]);
 
   const recordCustom = (field, v) => dispatch({ type: 'RECORD_CUSTOM', field, value: v });
 
@@ -145,8 +157,8 @@ export default function Sell() {
   }, [step]);
 
   const fieldMissing = useMemo(
-    () => missingRequired(schema, form.fv, { brand, condition, subcategory: null }),
-    [schema, form.fv, brand, condition]
+    () => missingRequired(schema, form.fv, { brand, condition, subcategory }),
+    [schema, form.fv, brand, condition, subcategory]
   );
   // Effective photo rule for the current values (knows the subcategory once the
   // seller reaches Details — e.g. Property → Land/Plot flips to optional).
@@ -539,7 +551,7 @@ function DetailsStep({ form, set, setFv, schema, cat, isJob, brand, condition, o
 
       {/* Title — helper is category-specific */}
       <Field label={isJob ? 'Job title' : 'Title'} required helper={schema.titleExample}>
-        <input value={form.title} onChange={(e) => set({ title: e.target.value })} placeholder={schema.titleExample} className="input" />
+        <input value={form.title} onChange={(e) => set({ title: e.target.value.slice(0, TITLE_MAX) })} maxLength={TITLE_MAX} placeholder={schema.titleExample} className="input" />
       </Field>
 
       {/* Dynamic category fields (progressive).
@@ -561,7 +573,7 @@ function DetailsStep({ form, set, setFv, schema, cat, isJob, brand, condition, o
       <Field label={priceLabel} required={!form.onRequest && !isJob} helper="e.g. K450,000">
         <div className="flex items-center rounded-2xl border border-hairline bg-surface px-4">
           <span className="text-xl font-bold text-faint">K</span>
-          <input type="number" inputMode="numeric" value={form.price} onChange={(e) => set({ price: e.target.value })} placeholder="0" disabled={form.onRequest} className="h-14 w-full bg-transparent px-2 text-2xl font-extrabold text-ink outline-none disabled:opacity-40" />
+          <input type="number" inputMode="decimal" min={0} max={PRICE_MAX} value={form.price} onChange={(e) => set({ price: sanitizeNumber(e.target.value) })} onBlur={(e) => set({ price: clampToField({ min: 0, max: PRICE_MAX }, sanitizeNumber(e.target.value)) })} placeholder="0" disabled={form.onRequest} className="h-14 w-full bg-transparent px-2 text-2xl font-extrabold text-ink outline-none disabled:opacity-40" />
           <span className="text-sm font-semibold text-faint">ZMW{isJob ? '/mo' : ''}</span>
         </div>
         <div className="mt-2 flex flex-wrap items-center gap-4">
