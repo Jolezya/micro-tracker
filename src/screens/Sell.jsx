@@ -198,8 +198,14 @@ export default function Sell() {
       </div>
 
       <Container className="pt-5">
-        <AnimatePresence mode="wait">
-          <motion.div key={step} initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} transition={{ duration: 0.26, ease: [0.22, 1, 0.36, 1] }}>
+        {/* No AnimatePresence/exit here on purpose: `mode="wait"` holds the next
+            step unmounted until the previous one finishes exiting, so a stalled
+            animation frame (iOS in-app webviews throttle rAF, e.g. when the page
+            is backgrounded mid-transition) leaves the step body blank. The enter
+            animation also never starts from opacity 0 — if it never runs, the
+            form is still fully visible, just un-animated. */}
+        <div>
+          <motion.div key={step} initial={{ y: 8 }} animate={{ y: 0 }} transition={{ duration: 0.26, ease: [0.22, 1, 0.36, 1] }}>
             {step === 0 && <CategoryStep value={form.category} onSelect={(id) => { set({ category: id, fv: {} }); setStep(1); }} />}
             {step === 1 && <PlanStep value={form.listingPlan} onSelect={(id) => set({ listingPlan: id })} category={form.category} />}
             {step === 2 && <PhotoStep form={form} set={set} plan={plan} photo={photo} cat={cat} enhancing={enhancing} setEnhancing={setEnhancing} toast={toast} />}
@@ -212,7 +218,7 @@ export default function Sell() {
             )}
             {step === 4 && <ReviewStep form={form} schema={schema} plan={plan} cat={cat} brand={brand} condition={condition} goTo={setStep} />}
           </motion.div>
-        </AnimatePresence>
+        </div>
       </Container>
 
       {/* Footer CTA */}
@@ -536,16 +542,15 @@ function DetailsStep({ form, set, setFv, schema, cat, isJob, brand, condition, o
         <input value={form.title} onChange={(e) => set({ title: e.target.value })} placeholder={schema.titleExample} className="input" />
       </Field>
 
-      {/* Dynamic category fields (progressive) */}
-      <AnimatePresence initial={false}>
-        {fields.map((f) => (
-          <motion.div key={f.key} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
-            <Field label={f.label} required={f.required} helper={f.helper}>
-              <ListingField field={f} value={form.fv[f.key]} onChange={(v) => setFv(f.key, v)} values={form.fv} onCustom={(v) => recordCustom(f.key, v)} />
-            </Field>
-          </motion.div>
-        ))}
-      </AnimatePresence>
+      {/* Dynamic category fields (progressive).
+          Rendered plainly — these are required inputs, so their visibility must
+          never depend on an animation frame that may never arrive. Disclosure is
+          about which fields exist, not about animating them in. */}
+      {fields.map((f) => (
+        <Field key={f.key} label={f.label} required={f.required} helper={f.helper}>
+          <ListingField field={f} value={form.fv[f.key]} onChange={(v) => setFv(f.key, v)} values={form.fv} onCustom={(v) => recordCustom(f.key, v)} />
+        </Field>
+      ))}
 
       {/* Description — helper is category-specific */}
       <Field label="Description" required helper={schema.descriptionHelp}>
