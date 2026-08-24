@@ -29,12 +29,14 @@ function Rail({ children }) {
   );
 }
 
-// Carousel card width: ~two full cards plus a deliberate slice of the next, so
-// the peek reads as "swipe for more" rather than an accidental crop. Capped so
-// tablets/desktop simply fit more cards instead of inflating them.
+// Carousel card width: two full cards plus a ~17% sliver of the next — enough
+// to say "there's more" without competing with the two full cards. The third
+// card starts after 16px padding + 2 cards + 2 gaps, so peek = vw − 2·W − 40;
+// solving for peek = 0.17·W gives W = (vw − 40)/2.17, which holds the ratio
+// steady at every phone width. Fixed from md up, where more cards simply fit.
 function RailCard({ listing }) {
   return (
-    <div className="w-[40vw] min-w-[132px] max-w-[172px] shrink-0">
+    <div className="w-[calc(46vw-18px)] shrink-0 md:w-[172px]">
       <ListingCard listing={listing} />
     </div>
   );
@@ -228,9 +230,10 @@ export default function Home() {
           <CategoryGrid />
         </div>
 
-        {/* Recently viewed */}
+        {/* Recently viewed — first section after the dense category grid, so it
+            sits tighter than the standard rail rhythm below it. */}
         {recent.length > 0 && (
-          <section className="mt-8">
+          <section className="mt-[26px]">
             <SectionHeader title="Recently viewed" action="Clear" onAction={() => {}} />
             <Rail>
               {recent.map((l) => <RailCard key={l.id} listing={l} />)}
@@ -239,7 +242,7 @@ export default function Home() {
         )}
 
         {/* Trending — what buyers are looking at right now */}
-        <section className="mt-8">
+        <section className={recent.length > 0 ? 'mt-8' : 'mt-[26px]'}>
           <RailHeader
             icon={<TrendingUp size={19} className="text-accent" />}
             title="Trending now"
