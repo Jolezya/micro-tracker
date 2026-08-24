@@ -218,7 +218,16 @@ export default function Sell() {
             form is still fully visible, just un-animated. */}
         <div>
           <motion.div key={step} initial={{ y: 8 }} animate={{ y: 0 }} transition={{ duration: 0.26, ease: [0.22, 1, 0.36, 1] }}>
-            {step === 0 && <CategoryStep value={form.category} onSelect={(id) => { set({ category: id, fv: {} }); setStep(1); }} />}
+            {/* Only discard the category-specific answers when the category
+                actually changes — they don't apply to a different schema.
+                Re-picking the same category (e.g. stepping back to check) must
+                not silently wipe everything the seller already filled in. */}
+            {step === 0 && (
+              <CategoryStep
+                value={form.category}
+                onSelect={(id) => { set(id === form.category ? { category: id } : { category: id, fv: {} }); setStep(1); }}
+              />
+            )}
             {step === 1 && <PlanStep value={form.listingPlan} onSelect={(id) => set({ listingPlan: id })} category={form.category} />}
             {step === 2 && <PhotoStep form={form} set={set} plan={plan} photo={photo} cat={cat} enhancing={enhancing} setEnhancing={setEnhancing} toast={toast} />}
             {step === 3 && (
