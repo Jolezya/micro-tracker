@@ -11,6 +11,7 @@ import { detectCategory, suggestPrice, suggestTitle, generateDescription, isDupl
 import { kwacha, kwachaCompact, timeAgo, distanceKm, formatDistance, compactNumber, initials, formatPrice } from '../format.js';
 import { placeholderDataUri, resolveKind, coverPhoto, realPhotos } from '../media.js';
 import { TOWNS_FULL, TOWN_NAMES, findTown, townCoords, locationOf, PROVINCES } from '../../data/locations.js';
+import { listingSchema, visibleFields, missingRequired } from '../../data/listingSchema.js';
 
 const NOW = Date.parse('2026-08-05T09:00:00Z');
 const L = (over = {}) => ({
@@ -367,5 +368,73 @@ describe('media layer', () => {
     expect(a).toMatch(/^data:image\/svg\+xml,/);
     expect(a).toBe(b); // deterministic per listing
     expect(a).not.toBe(c); // varies by listing/kind
+  });
+});
+
+// ============================================================
+// Category-driven listing schema engine
+// ============================================================
+describe('listing schema engine', () => {
+  it('returns a category-specific schema with tailored helper text', () => {
+    expect(listingSchema('vehicles').titleExample).toMatch(/Toyota|Corolla/i);
+    expect(listingSchema('electronics').titleExample).toMatch(/iPhone|GB/i);
+    expect(listingSchema('property').titleExample).toMatch(/Bedroom|House/i);
+    expect(listingSchema('jobs').isJob).toBe(true);
+  });
+
+  it('falls back to the default schema for unknown categories', () => {
+    const d = listingSchema('does-not-exist');
+    expect(d).toBe(listingSchema('everything'));
+    expect(d.fields.some((f) => f.key === 'condition')).toBe(true);
+  });
+
+  it('progressively discloses the model field only after a make (dependent options)', () => {
+    const schema = listingSchema('vehicles');
+    const model = schema.fields.find((f) => f.key === 'model');
+    expect(model.optionsFrom({})).toEqual([]); // no make yet
+    const opts = model.optionsFrom({ make: 'Toyota' }); // select stores a string
+    expect(opts.length).toBeGreaterThan(0);
+    expect(opts).toContain('Corolla');
+  });
+
+  it('hides body type for motorcycles but shows it for cars', () => {
+    const schema = listingSchema('vehicles');
+    const car = visibleFields(schema, { vehicleType: ['Car'] });
+    const moto = visibleFields(schema, { vehicleType: ['Motorcycle'] });
+    expect(car.some((f) => f.key === 'bodyType')).toBe(true);
+    expect(moto.some((f) => f.key === 'bodyType')).toBe(false);
+  });
+
+  it('swaps building fields for land fields when the property is a plot', () => {
+    const schema = listingSchema('property');
+    const house = visibleFields(schema, { propertyType: ['House'] }).map((f) => f.key);
+    const land = visibleFields(schema, { propertyType: ['Land / Plot'] }).map((f) => f.key);
+    expect(house).toContain('bedrooms');
+    expect(house).not.toContain('landUse');
+    expect(land).toContain('landUse');
+    expect(land).not.toContain('bedrooms');
+    // land never asks for "condition"
+    expect(schema.fields.some((f) => f.key === 'condition')).toBe(false);
+  });
+
+  it('reveals electronics storage/ram/os only for the right product types', () => {
+    const schema = listingSchema('electronics');
+    const phone = visibleFields(schema, { type: ['Phones'] }).map((f) => f.key);
+    const tv = visibleFields(schema, { type: ['TV & Audio'] }).map((f) => f.key);
+    expect(phone).toEqual(expect.arrayContaining(['storage', 'ram', 'os']));
+    expect(tv).not.toContain('storage');
+    expect(tv).toContain('screenSize');
+  });
+
+  it('reports missing required fields across top-level and attr keys', () => {
+    const schema = listingSchema('vehicles');
+    const missing = missingRequired(schema, {}, {});
+    expect(missing).toEqual(expect.arrayContaining(['Vehicle type', 'Make / brand', 'Condition']));
+    const done = missingRequired(
+      schema,
+      { vehicleType: ['Car'] },
+      { brand: 'Toyota', condition: 'Good' }
+    );
+    expect(done).toEqual([]);
   });
 });

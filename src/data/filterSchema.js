@@ -54,6 +54,14 @@ export const VEHICLE_MAKES = {
   Kia: ['Picanto', 'Rio', 'Seltos', 'Sportage', 'Sorento'],
   Isuzu: ['D-Max', 'MU-X', 'KB'],
   Suzuki: ['Swift', 'Vitara', 'Jimny', 'Alto'],
+  Subaru: ['Impreza', 'Forester', 'Outback', 'Legacy', 'XV'],
+  Volvo: ['XC40', 'XC60', 'XC90', 'S60', 'V60'],
+  Porsche: ['911', 'Cayenne', 'Macan', 'Panamera', 'Taycan'],
+  BYD: ['Atto 3', 'Dolphin', 'Seal', 'Tang', 'Han'],
+  Peugeot: ['208', '2008', '3008', '308', '508'],
+  Renault: ['Clio', 'Duster', 'Kwid', 'Megane', 'Koleos'],
+  Jeep: ['Wrangler', 'Grand Cherokee', 'Compass', 'Renegade'],
+  Chevrolet: ['Spark', 'Aveo', 'Trailblazer', 'Captiva', 'Silverado'],
   Other: [],
 };
 export const VEHICLE_MAKE_NAMES = Object.keys(VEHICLE_MAKES);
