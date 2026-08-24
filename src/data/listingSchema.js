@@ -44,11 +44,34 @@ const one = (v) => (Array.isArray(v) ? v[0] : v) || '';
 
 const isLand = (v) => /land|plot/i.test(one(v.propertyType));
 
+// ---------------- Photo requirement framework ----------------
+// Every schema carries a `photo` config with a level:
+//   'required'    — must add at least `min` photo(s) before publishing
+//   'recommended' — encouraged, never blocked
+//   'optional'    — fine to publish without
+// A schema may also define `photoOverride(values)` to change the rule at the
+// subcategory level (e.g. Property → Land/Plot becomes optional). photoRule()
+// resolves the effective rule for the current values and is the single source
+// of truth used by both the Photos step and the publish gate.
+export function photoRule(schema, values = {}) {
+  const base = schema.photo || { level: 'recommended', min: 0 };
+  const over = schema.photoOverride ? schema.photoOverride(values) : null;
+  const merged = { min: 1, ...base, ...(over || {}) };
+  merged.slots = (over && over.slots) || schema.photoSlots || [];
+  // A rule is "ambiguous here" when it can still change based on a field the
+  // seller hasn't reached yet (subcategory). The Photos step must not hard-block
+  // on an ambiguous rule; the publish gate — which knows the subcategory —
+  // enforces the real requirement.
+  merged.deferred = !!schema.photoOverride;
+  return merged;
+}
+
 // ---------------- Vehicles ----------------
 const VEHICLES = {
   titleExample: 'e.g. Toyota Corolla 2022',
   descriptionHelp: 'Mention service history, number of owners, condition and key features.',
-  photoSlots: ['Front', 'Rear', 'Side', 'Interior', 'Dashboard', 'Engine', 'Wheels', 'Additional'],
+  photo: { level: 'required', min: 1, title: 'Add photos of your vehicle', help: 'Front, rear, side, interior and dashboard photos help buyers make a decision.' },
+  photoSlots: ['Front', 'Rear', 'Side', 'Interior', 'Dashboard', 'Engine', 'Wheels'],
   fields: [
     { key: 'vehicleType', label: 'Vehicle type', type: 'chips', options: VEHICLE_TYPES, required: true },
     { key: 'make', label: 'Make / brand', type: 'select', options: VEHICLE_MAKE_NAMES, top: 'brand', required: true, placeholder: 'Search or type a brand…', helper: 'Not listed? Just type it in.' },
@@ -66,7 +89,15 @@ const VEHICLES = {
 const PROPERTY = {
   titleExample: 'e.g. 3-Bedroom House in Lusaka',
   descriptionHelp: 'Mention bedrooms, bathrooms, location, amenities and the property condition.',
-  photoSlots: ['Exterior', 'Living areas', 'Bedrooms', 'Bathrooms', 'Kitchen', 'Garden/yard', 'Additional'],
+  photo: { level: 'required', min: 1, title: 'Add photos of the property', help: 'Exterior, living room, kitchen, bedrooms and bathrooms help buyers decide.' },
+  // Land/plots don't need building photos — a site view or map matters more.
+  photoOverride: (v) => (isLand(v) ? {
+    level: 'optional', min: 0,
+    title: 'Add photos or a site/map image (optional)',
+    help: 'Photos, site images, survey plans or maps help buyers understand the location.',
+    slots: ['Plot / boundary', 'Road access', 'Site view', 'Survey plan', 'Map'],
+  } : null),
+  photoSlots: ['Exterior', 'Living room', 'Kitchen', 'Bedrooms', 'Bathrooms', 'Garden/yard'],
   fields: [
     { key: 'propertyType', label: 'Property type', type: 'chips', options: PROPERTY_BUILD_TYPES, required: true },
     { key: 'listingKind', label: 'For sale or rent', type: 'chips', options: ['For Sale', 'For Rent'], multi: false, required: true, allowCustom: false },
@@ -91,7 +122,8 @@ const PROPERTY = {
 const ELECTRONICS = {
   titleExample: 'e.g. iPhone 15 Pro Max 256GB',
   descriptionHelp: 'Mention condition, full specifications, accessories included and any warranty.',
-  photoSlots: ['Front', 'Back', 'Screen on', 'Accessories', 'Packaging', 'Serial / model'],
+  photo: { level: 'required', min: 1, title: 'Add photos of your item', help: 'Front, back, screen and any visible damage build buyer trust.' },
+  photoSlots: ['Front', 'Back', 'Screen', 'Accessories', 'Packaging', 'Any visible damage'],
   fields: [
     { key: 'type', label: 'Product type', type: 'chips', options: ELECTRONICS_TYPES, top: 'subcategory', required: true },
     { key: 'brand', label: 'Brand', type: 'select', options: ELECTRONICS_BRANDS, top: 'brand', required: true, placeholder: 'Search or type a brand…' },
@@ -111,6 +143,7 @@ const matchType = (v, list) => list.includes(one(v.type));
 const FASHION = {
   titleExample: 'e.g. Nike Air Jordan 1 Retro High',
   descriptionHelp: 'Mention brand, size, condition, material and any flaws.',
+  photo: { level: 'required', min: 1, title: 'Add photos of your item', help: 'Front, back and close-ups of the label and any flaws help buyers decide.' },
   photoSlots: ['Front', 'Back', 'Detail', 'Label / tag', 'On (optional)'],
   fields: [
     { key: 'type', label: 'Product type', type: 'chips', options: ['Shoes', 'Clothing', 'Bags', 'Watches', 'Accessories'], top: 'subcategory', required: true },
@@ -127,6 +160,7 @@ const FASHION = {
 const JOBS = {
   titleExample: 'e.g. Financial Analyst',
   descriptionHelp: 'Describe the role, responsibilities, requirements and how to apply.',
+  photo: { level: 'optional', min: 0, title: 'Company logo or image (optional)', help: 'Add your company logo or a relevant image to make your job listing stand out.' },
   photoSlots: ['Company logo', 'Workplace', 'Additional'],
   isJob: true,
   fields: [
@@ -146,6 +180,7 @@ const JOBS = {
 const SERVICES = {
   titleExample: 'e.g. Professional Moving Services',
   descriptionHelp: 'Describe what you offer, your experience and what makes your service reliable.',
+  photo: { level: 'optional', min: 0, title: 'Photos of your work (optional)', help: 'Show examples of your work to help customers understand what you offer.' },
   photoSlots: ['Work sample 1', 'Work sample 2', 'Team / tools', 'Additional'],
   fields: [
     { key: 'serviceCategory', label: 'Service category', type: 'select', options: ['Moving', 'Cleaning', 'Plumbing', 'Electrical', 'Construction', 'Beauty', 'Tutoring', 'Photography', 'IT & Repairs', 'Catering', 'Transport', 'Other'], top: 'subcategory', required: true, placeholder: 'Search or type…' },
@@ -160,6 +195,7 @@ const SERVICES = {
 const FURNITURE = {
   titleExample: 'e.g. Modern 6-Seater Dining Table',
   descriptionHelp: 'Mention material, dimensions, condition and pickup/delivery.',
+  photo: { level: 'required', min: 1, title: 'Add photos of your furniture', help: 'Show it from a few angles — and in the room if you can.' },
   photoSlots: ['Front', 'Side', 'Detail', 'In room', 'Additional'],
   fields: [
     { key: 'type', label: 'Type', type: 'chips', options: ['Sofa', 'Table', 'Chair', 'Bed', 'Storage', 'Lighting', 'Desk', 'Other'], top: 'subcategory' },
@@ -172,6 +208,7 @@ const FURNITURE = {
 const PETS = {
   titleExample: 'e.g. Boerboel Puppies — vaccinated',
   descriptionHelp: 'Mention breed, age, vaccination, temperament and readiness.',
+  photo: { level: 'required', min: 1, title: 'Add photos of the pet', help: 'Clear, recent photos help buyers connect with your pet.' },
   photoSlots: ['Photo 1', 'Photo 2', 'Photo 3', 'Additional'],
   fields: [
     { key: 'type', label: 'Type', type: 'chips', options: ['Dogs', 'Cats', 'Birds', 'Horses', 'Fish', 'Other'], top: 'subcategory', required: true },
@@ -182,8 +219,9 @@ const PETS = {
   ],
 };
 const DEFAULT = {
-  titleExample: 'e.g. What are you selling?',
+  titleExample: 'e.g. What are you listing?',
   descriptionHelp: 'Describe your item — condition, key details and why you’re selling.',
+  photo: { level: 'recommended', min: 1, title: 'Add photos', help: 'Listings with clear photos sell faster — add a few if you can.' },
   photoSlots: ['Photo 1', 'Photo 2', 'Photo 3', 'Additional'],
   fields: [
     { key: 'type', label: 'Type', type: 'text', helper: 'Optional', top: 'subcategory' },
@@ -194,8 +232,8 @@ const DEFAULT = {
 
 const SCHEMAS = {
   vehicles: VEHICLES,
-  motorcycles: { ...VEHICLES, titleExample: 'e.g. KTM 890 Adventure R 2021', photoSlots: ['Left side', 'Right side', 'Front', 'Rear', 'Engine', 'Dashboard', 'Additional'] },
-  boats: { ...VEHICLES, titleExample: 'e.g. Axopar 28 Cabin 2022', photoSlots: ['Exterior', 'Cockpit', 'Cabin', 'Engine', 'Additional'] },
+  motorcycles: { ...VEHICLES, titleExample: 'e.g. KTM 890 Adventure R 2021', photo: { level: 'required', min: 1, title: 'Add photos of your motorcycle', help: 'Left, right, front, rear and dashboard shots help buyers decide.' }, photoSlots: ['Left side', 'Right side', 'Front', 'Rear', 'Engine', 'Dashboard'] },
+  boats: { ...VEHICLES, titleExample: 'e.g. Axopar 28 Cabin 2022', photo: { level: 'required', min: 1, title: 'Add photos of your boat', help: 'Exterior, cockpit, cabin and engine shots help buyers decide.' }, photoSlots: ['Exterior', 'Cockpit', 'Cabin', 'Engine'] },
   property: PROPERTY,
   electronics: ELECTRONICS,
   fashion: FASHION,
@@ -203,9 +241,9 @@ const SCHEMAS = {
   services: SERVICES,
   furniture: FURNITURE,
   pets: PETS,
-  collectibles: { ...DEFAULT, titleExample: 'e.g. Pokémon Base Set Charizard PSA 8' },
-  sports: { ...DEFAULT, titleExample: 'e.g. Canyon Ultimate CF SLX road bike' },
-  business: { ...DEFAULT, titleExample: 'e.g. Commercial pizza oven' },
+  collectibles: { ...DEFAULT, titleExample: 'e.g. Pokémon Base Set Charizard PSA 8', photo: { level: 'required', min: 1, title: 'Add photos of your item', help: 'Sharp, well-lit photos of condition and any markings build trust.' } },
+  sports: { ...DEFAULT, titleExample: 'e.g. Canyon Ultimate CF SLX road bike', photo: { level: 'required', min: 1, title: 'Add photos of your gear', help: 'Show condition, brand and any wear from a few angles.' } },
+  business: { ...DEFAULT, titleExample: 'e.g. Commercial pizza oven', photo: { level: 'recommended', min: 1, title: 'Add photos', help: 'Photos help buyers understand the equipment or opportunity.' } },
   everything: DEFAULT,
 };
 

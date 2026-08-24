@@ -13,7 +13,7 @@ import { useToast } from '../components/ui/Toast.jsx';
 import { CATEGORIES, CATEGORY_MAP } from '../data/categories.js';
 import { CURRENT_USER } from '../data/users.js';
 import { LISTING_PLANS, LISTING_PLAN_MAP } from '../data/plans.js';
-import { listingSchema, visibleFields, missingRequired } from '../data/listingSchema.js';
+import { listingSchema, visibleFields, missingRequired, photoRule } from '../data/listingSchema.js';
 import { PlanBenefitList } from '../components/plan/PlanUI.jsx';
 import { OptionChips } from '../components/filters/OptionChips.jsx';
 import { ListingField } from '../components/listing/ListingField.jsx';
@@ -144,12 +144,17 @@ export default function Sell() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [step]);
 
-  const reqMissing = useMemo(
+  const fieldMissing = useMemo(
     () => missingRequired(schema, form.fv, { brand, condition, subcategory: null }),
     [schema, form.fv, brand, condition]
   );
+  // Effective photo rule for the current values (knows the subcategory once the
+  // seller reaches Details — e.g. Property → Land/Plot flips to optional).
+  const photo = useMemo(() => photoRule(schema, form.fv), [schema, form.fv]);
+  const needPhoto = photo.level === 'required' && form.photos.length === 0;
+  const reqMissing = needPhoto ? [...fieldMissing, `At least ${photo.min} photo`] : fieldMissing;
   const canReview =
-    !!form.title.trim() && (isJob || form.photos.length > 0) && reqMissing.length === 0 &&
+    !!form.title.trim() && !needPhoto && fieldMissing.length === 0 &&
     (isJob || form.onRequest || !!form.price);
 
   const next = () => setStep((s) => Math.min(STEPS.length - 1, s + 1));
@@ -197,7 +202,7 @@ export default function Sell() {
           <motion.div key={step} initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} transition={{ duration: 0.26, ease: [0.22, 1, 0.36, 1] }}>
             {step === 0 && <CategoryStep value={form.category} onSelect={(id) => { set({ category: id, fv: {} }); setStep(1); }} />}
             {step === 1 && <PlanStep value={form.listingPlan} onSelect={(id) => set({ listingPlan: id })} category={form.category} />}
-            {step === 2 && <PhotoStep form={form} set={set} plan={plan} slots={schema.photoSlots} isJob={isJob} enhancing={enhancing} setEnhancing={setEnhancing} toast={toast} />}
+            {step === 2 && <PhotoStep form={form} set={set} plan={plan} photo={photo} cat={cat} enhancing={enhancing} setEnhancing={setEnhancing} toast={toast} />}
             {step === 3 && (
               <DetailsStep
                 form={form} set={set} setFv={setFv} schema={schema} cat={cat} isJob={isJob}
@@ -215,11 +220,17 @@ export default function Sell() {
         <div className="fixed inset-x-0 bottom-[68px] z-40 lg:bottom-0">
           <div className="glass mx-auto flex max-w-3xl items-center gap-3 border-t px-4 py-3 pb-safe">
             {step === 1 && <Button full size="lg" onClick={next}>Continue with {plan.name} <ChevronRight size={18} /></Button>}
-            {step === 2 && (
-              <Button full size="lg" onClick={next} disabled={!isJob && form.photos.length === 0}>
-                {isJob && form.photos.length === 0 ? 'Skip photos' : 'Continue'} <ChevronRight size={18} />
-              </Button>
-            )}
+            {step === 2 && (() => {
+              const count = form.photos.length;
+              // Block only when the rule is required AND unambiguous at this step.
+              // Deferred rules (subcategory-dependent, e.g. property) are enforced
+              // at the publish gate instead, so land sellers aren't forced here.
+              const block = photo.level === 'required' && !photo.deferred && count < photo.min;
+              const label = count > 0 ? 'Continue' : photo.level === 'required' ? 'Continue' : 'Continue without photos';
+              return (
+                <Button full size="lg" onClick={next} disabled={block}>{label} <ChevronRight size={18} /></Button>
+              );
+            })()}
             {step === 3 && (
               <div className="flex-1">
                 {reqMissing.length > 0 && <p className="mb-1 px-1 text-center text-xs text-warning">Still needed: {reqMissing.join(', ')}</p>}
@@ -325,11 +336,14 @@ function Fact({ children }) {
 /* ------------------------------------------------------------------ */
 /* Step 3 — Photos                                                     */
 /* ------------------------------------------------------------------ */
-function PhotoStep({ form, set, plan, slots, isJob, enhancing, setEnhancing, toast }) {
+function PhotoStep({ form, set, plan, photo, cat, enhancing, setEnhancing, toast }) {
   const count = form.photos.length;
   const limit = plan.photoLimit;
   const fileRef = useRef(null);
   const [busy, setBusy] = useState(false);
+  const slots = photo.slots;
+  const required = photo.level === 'required';
+  const optional = photo.level === 'optional';
 
   const pickFiles = () => {
     if (count >= limit) { toast(`${plan.name} allows up to ${limit} photos`, { type: 'info' }); return; }
@@ -352,17 +366,24 @@ function PhotoStep({ form, set, plan, slots, isJob, enhancing, setEnhancing, toa
   };
   const remove = (id) => set({ photos: form.photos.filter((p) => p.id !== id) });
   const makeCover = (id) => { const item = form.photos.find((p) => p.id === id); set({ photos: [item, ...form.photos.filter((p) => p.id !== id)] }); toast('Cover photo updated'); };
-  const enhance = () => { if (!count) return; setEnhancing(true); setTimeout(() => { setEnhancing(false); toast('Photos enhanced — brighter & sharper ✨'); }, 1300); };
+  const [enhanced, setEnhanced] = useState(false);
+  const enhance = () => { if (!count) return; setEnhancing(true); setTimeout(() => { setEnhancing(false); setEnhanced(true); toast('Photos enhanced — brighter & sharper ✨'); }, 1300); };
   const enough = count >= 3;
+  // Real check: identical sources = duplicates the seller can remove.
+  const dupCount = count - new Set(form.photos.map((p) => p.src)).size;
 
   return (
     <div>
-      <h2 className="text-xl font-extrabold text-ink">Add photos {isJob && <span className="text-sm font-semibold text-muted">· optional</span>}</h2>
-      <p className="mt-1 text-sm text-muted">
-        {isJob
-          ? 'Optional for jobs — a company logo or workplace photo helps, but you can skip this.'
-          : `Add ${REC_PHOTOS}+ for best results. Drag to reorder — the first is your cover.`}
-      </p>
+      <div className="flex items-center gap-2">
+        <h2 className="text-xl font-extrabold text-ink">{photo.title || 'Add photos'}</h2>
+        {required
+          ? <span className="text-danger" aria-label="required">*</span>
+          : <span className="rounded-full bg-ink/5 px-2 py-0.5 text-[11px] font-semibold text-muted">{optional ? 'Optional' : 'Recommended'}</span>}
+      </div>
+      <p className="mt-1 text-sm text-muted">{photo.help}</p>
+      {required && count === 0 && (
+        <p className="mt-1.5 inline-flex items-center gap-1 text-sm font-semibold text-warning"><Info size={14} /> Add at least {photo.min} photo{photo.min === 1 ? '' : 's'} to publish.</p>
+      )}
 
       {/* category-specific suggested shots */}
       {slots?.length > 0 && (
@@ -379,7 +400,9 @@ function PhotoStep({ form, set, plan, slots, isJob, enhancing, setEnhancing, toa
         <div className="flex-1">
           <div className="flex items-center justify-between text-sm">
             <span className="font-semibold text-ink">{count} of {limit >= 40 ? '∞' : limit} photos</span>
-            <span className={enough ? 'text-success' : 'text-muted'}>{enough ? 'Looking good!' : isJob ? 'Optional' : `Add ${Math.max(0, 3 - count)} more`}</span>
+            <span className={enough ? 'text-success' : 'text-muted'}>
+              {enough ? 'Looking good!' : optional ? 'Optional' : required && count === 0 ? 'Required' : `Add ${Math.max(0, 3 - count)} more`}
+            </span>
           </div>
           <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-ink/10">
             <div className="h-full rounded-full bg-accent transition-all" style={{ width: `${Math.min(100, (count / REC_PHOTOS) * 100)}%` }} />
@@ -394,7 +417,7 @@ function PhotoStep({ form, set, plan, slots, isJob, enhancing, setEnhancing, toa
           <button onClick={pickFiles} className="press grid aspect-[4/3] w-full place-items-center rounded-3xl border-2 border-dashed border-line/25 bg-surface text-muted">
             <div className="flex flex-col items-center gap-2">
               <span className="grid h-14 w-14 place-items-center rounded-2xl bg-accent-soft text-accent">{busy ? <Spinner size={22} /> : <ImagePlus size={26} />}</span>
-              <span className="font-semibold text-ink">Add your photos</span>
+              <span className="font-semibold text-ink">{optional ? 'Add a photo (optional)' : 'Add your photos'}</span>
               <span className="text-xs">Choose real images from your device</span>
             </div>
           </button>
@@ -437,24 +460,31 @@ function PhotoStep({ form, set, plan, slots, isJob, enhancing, setEnhancing, toa
           <div className="mb-2 flex items-center gap-2">
             <span className="grid h-7 w-7 place-items-center rounded-lg bg-accent text-accent-ink"><Wand2 size={15} /></span>
             <p className="text-sm font-bold text-ink">AI photo check</p>
-            <span className="ml-auto text-xs font-semibold text-success">{enhancing ? 'Analysing…' : 'Looks good'}</span>
+            <span className={`ml-auto text-xs font-semibold ${dupCount > 0 ? 'text-warning' : 'text-success'}`}>{enhancing ? 'Analysing…' : dupCount > 0 ? 'Check duplicates' : 'Looks good'}</span>
           </div>
           <ul className="space-y-1.5 text-sm">
-            <CheckRow ok>Lighting enhanced automatically</CheckRow>
-            <CheckRow ok>No blurry photos detected</CheckRow>
-            <CheckRow ok>No duplicates found</CheckRow>
-            <CheckRow ok>Cover photo recommended (photo 1)</CheckRow>
-            {count < 3 ? <CheckRow warn>Add {3 - count} more angle{3 - count === 1 ? '' : 's'} to build buyer trust</CheckRow> : <CheckRow ok>Great range of angles</CheckRow>}
+            {enhanced ? <CheckRow ok>Lighting enhanced automatically</CheckRow> : <CheckRow tip>Tap Auto-enhance to brighten &amp; sharpen</CheckRow>}
+            {dupCount > 0
+              ? <CheckRow warn>{dupCount} duplicate photo{dupCount === 1 ? '' : 's'} — remove to avoid confusing buyers</CheckRow>
+              : <CheckRow ok>No duplicate photos</CheckRow>}
+            <CheckRow ok>Cover photo set to photo 1 — tap ★ to change</CheckRow>
+            <CheckRow tip>Make sure every photo clearly shows your {cat?.label.toLowerCase() || 'item'}</CheckRow>
+            {optional
+              ? <CheckRow ok>Extra photos are optional for this listing</CheckRow>
+              : count < 3
+                ? <CheckRow warn>Add {3 - count} more angle{3 - count === 1 ? '' : 's'} to build buyer trust</CheckRow>
+                : <CheckRow ok>Great range of angles</CheckRow>}
           </ul>
         </div>
       )}
     </div>
   );
 }
-function CheckRow({ ok, warn, children }) {
+function CheckRow({ ok, warn, tip, children }) {
+  const tone = warn ? 'bg-warning/15 text-warning' : tip ? 'bg-accent-soft text-accent' : 'bg-success/15 text-success';
   return (
     <li className="flex items-center gap-2">
-      <span className={`grid h-5 w-5 shrink-0 place-items-center rounded-full ${warn ? 'bg-warning/15 text-warning' : 'bg-success/15 text-success'}`}>{warn ? <Info size={12} /> : <Check size={12} strokeWidth={3} />}</span>
+      <span className={`grid h-5 w-5 shrink-0 place-items-center rounded-full ${tone}`}>{warn || tip ? <Info size={12} /> : <Check size={12} strokeWidth={3} />}</span>
       <span className={warn ? 'text-warning' : 'text-muted'}>{children}</span>
     </li>
   );

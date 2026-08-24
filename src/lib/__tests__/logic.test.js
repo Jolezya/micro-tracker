@@ -11,7 +11,7 @@ import { detectCategory, suggestPrice, suggestTitle, generateDescription, isDupl
 import { kwacha, kwachaCompact, timeAgo, distanceKm, formatDistance, compactNumber, initials, formatPrice } from '../format.js';
 import { placeholderDataUri, resolveKind, coverPhoto, realPhotos } from '../media.js';
 import { TOWNS_FULL, TOWN_NAMES, findTown, townCoords, locationOf, PROVINCES } from '../../data/locations.js';
-import { listingSchema, visibleFields, missingRequired } from '../../data/listingSchema.js';
+import { listingSchema, visibleFields, missingRequired, photoRule } from '../../data/listingSchema.js';
 
 const NOW = Date.parse('2026-08-05T09:00:00Z');
 const L = (over = {}) => ({
@@ -436,5 +436,52 @@ describe('listing schema engine', () => {
       { brand: 'Toyota', condition: 'Good' }
     );
     expect(done).toEqual([]);
+  });
+});
+
+// ============================================================
+// Category-based photo requirements
+// ============================================================
+describe('photo requirement framework', () => {
+  it('requires photos for appearance-driven categories', () => {
+    for (const c of ['vehicles', 'motorcycles', 'boats', 'property', 'electronics', 'furniture', 'fashion', 'sports', 'collectibles', 'pets']) {
+      expect(photoRule(listingSchema(c)).level).toBe('required');
+    }
+  });
+
+  it('makes photos optional for jobs and services', () => {
+    expect(photoRule(listingSchema('jobs')).level).toBe('optional');
+    expect(photoRule(listingSchema('services')).level).toBe('optional');
+    expect(photoRule(listingSchema('jobs')).min).toBe(0);
+  });
+
+  it('flips property from required to optional for land/plots (subcategory rule)', () => {
+    const schema = listingSchema('property');
+    expect(photoRule(schema, { propertyType: ['House'] }).level).toBe('required');
+    const land = photoRule(schema, { propertyType: ['Land / Plot'] });
+    expect(land.level).toBe('optional');
+    expect(land.title).toMatch(/site|map|optional/i);
+    // land guidance swaps building slots for site/map slots
+    expect(land.slots).toEqual(expect.arrayContaining(['Survey plan', 'Map']));
+  });
+
+  it('marks subcategory-dependent rules as deferred so the photos step does not hard-block', () => {
+    expect(photoRule(listingSchema('property')).deferred).toBe(true); // has an override
+    expect(photoRule(listingSchema('vehicles')).deferred).toBe(false); // unambiguous
+  });
+
+  it('surfaces category-specific photo guidance and slots', () => {
+    const v = photoRule(listingSchema('vehicles'));
+    expect(v.title).toMatch(/vehicle/i);
+    expect(v.slots).toEqual(expect.arrayContaining(['Front', 'Rear', 'Interior', 'Dashboard']));
+    const e = photoRule(listingSchema('electronics'));
+    expect(e.slots).toEqual(expect.arrayContaining(['Screen', 'Any visible damage']));
+    // no cross-category leakage
+    expect(v.slots).not.toContain('Screen');
+  });
+
+  it('defaults unknown/catch-all categories to recommended (encouraged, never blocked)', () => {
+    expect(photoRule(listingSchema('everything')).level).toBe('recommended');
+    expect(photoRule(listingSchema('does-not-exist')).level).toBe('recommended');
   });
 });
