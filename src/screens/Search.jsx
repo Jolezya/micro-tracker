@@ -119,7 +119,7 @@ export default function Search() {
     <div>
       {/* Header */}
       <div className="glass sticky top-0 z-30 safe-top">
-        <Container className="py-2.5">
+        <Container size="max-w-5xl" className="py-2.5">
           <div className="flex items-center gap-2">
             <form onSubmit={(e) => { e.preventDefault(); askAI(); }} className="relative flex-1">
               <SearchIcon size={18} className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-faint" />
@@ -155,7 +155,7 @@ export default function Search() {
         </Container>
       </div>
 
-      <Container className="pt-3">
+      <Container size="max-w-5xl" className="pt-3">
         {/* Subcategory pills */}
         {activeCat && (
           <div className="no-scrollbar -mx-4 mb-2 flex gap-2 overflow-x-auto px-4">
@@ -228,7 +228,7 @@ export default function Search() {
         {/* Results */}
         <div className="mt-4 pb-8">
           {loading ? (
-            <div className="grid grid-cols-2 gap-x-3 gap-y-6 sm:grid-cols-3 lg:grid-cols-4">
+            <div className="grid grid-cols-2 gap-x-3 gap-y-6 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
               {Array.from({ length: 8 }).map((_, i) => <ListingCardSkeleton key={i} />)}
             </div>
           ) : results.length === 0 ? (
@@ -243,7 +243,7 @@ export default function Search() {
           ) : search.view === 'list' ? (
             <div className="divide-y divide-line/10">{results.map((l) => <ListingRow key={l.id} listing={l} />)}</div>
           ) : (
-            <div className="grid grid-cols-2 gap-x-3 gap-y-6 sm:grid-cols-3 lg:grid-cols-4">
+            <div className="grid grid-cols-2 gap-x-3 gap-y-6 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
               {results.map((l, i) => <ListingCard key={l.id} listing={l} index={i} />)}
             </div>
           )}

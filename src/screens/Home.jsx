@@ -37,7 +37,7 @@ function HomeHeader() {
   const isDark = state.theme === 'dark';
   return (
     <div className="glass sticky top-0 z-30 safe-top">
-      <Container className="flex items-center gap-3 py-2.5">
+      <Container size="max-w-5xl" className="flex items-center gap-3 py-2.5">
         <Link to="/" className="flex items-center gap-2">
           <Logo size={30} />
           <span className="text-xl font-extrabold tracking-tight text-ink lg:hidden">Kaira</span>
@@ -105,12 +105,13 @@ export default function Home() {
       {indicator}
       <HomeHeader />
 
-      <Container className="pt-3">
-        {/* Hero — compact, search-first */}
+      <Container size="max-w-5xl" className="pt-3">
+        {/* Hero — compact, search-first (capped so it never stretches on desktop) */}
         <motion.div
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
+          className="max-w-2xl"
         >
           <h1 className="text-2xl font-extrabold tracking-tight text-ink sm:text-3xl">
             Zambia's smarter marketplace.
@@ -229,7 +230,7 @@ export default function Home() {
         {/* Latest — full grid */}
         <section className="mt-8 pb-8">
           <SectionHeader title="Fresh finds" action="Browse all" onAction={() => navigate('/search')} />
-          <div className="grid grid-cols-2 gap-x-3 gap-y-6 sm:grid-cols-3 lg:grid-cols-4">
+          <div className="grid grid-cols-2 gap-x-3 gap-y-6 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
             {latest.map((l, i) => (
               <ListingCard key={l.id} listing={l} index={i} />
             ))}
