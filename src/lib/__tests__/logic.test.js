@@ -9,7 +9,7 @@ import { planBenefits, boostReach, LISTING_PLANS, BOOST_OPTIONS } from '../../da
 import { parseQuery } from '../nlSearch.js';
 import { detectCategory, suggestPrice, suggestTitle, generateDescription, isDuplicate, fraudScore, recommend, closestOption } from '../ai.js';
 import { kwacha, kwachaCompact, timeAgo, distanceKm, formatDistance, compactNumber, initials, formatPrice } from '../format.js';
-import { placeholderDataUri, resolveKind, coverPhoto, realPhotos } from '../media.js';
+import { placeholderDataUri, resolveKind, coverPhoto, realPhotos, badgesFor } from '../media.js';
 import { TOWNS_FULL, TOWN_NAMES, findTown, townCoords, locationOf, PROVINCES } from '../../data/locations.js';
 import { listingSchema, visibleFields, missingRequired, photoRule } from '../../data/listingSchema.js';
 
@@ -359,6 +359,22 @@ describe('media layer', () => {
     expect(coverPhoto(withPhoto)).toBe('https://example.com/a.jpg');
     expect(realPhotos(phone)).toEqual([]); // no seller/real photos → placeholder path
     expect(coverPhoto(phone)).toBeNull();
+  });
+
+  it('caps listing badges at one placement/plan badge plus Verified', () => {
+    const verified = { verified: ['id'] };
+    const plain = { verified: [] };
+    // placement beats plan, plan beats nothing — only ever one of them
+    const sponsored = badgesFor({ sponsored: true, premium: true, listingPlan: 'gold' }, verified);
+    expect(sponsored.map((b) => b.label)).toEqual(['Sponsored', 'Verified']);
+    expect(badgesFor({ listingPlan: 'gold' }, verified).map((b) => b.label)).toEqual(['Gold', 'Verified']);
+    expect(badgesFor({ listingPlan: 'premium' }, verified).map((b) => b.label)).toEqual(['Premium', 'Verified']);
+    // an active boost outranks every other placement label
+    expect(badgesFor({ boostedUntil: Date.now() + 6e4, sponsored: true }, verified)[0].label).toBe('Boosted');
+    // never more than two, and unverified sellers get no trust badge
+    expect(badgesFor({ sponsored: true, listingPlan: 'gold' }, verified).length).toBeLessThanOrEqual(2);
+    expect(badgesFor({ listingPlan: 'premium' }, plain).map((b) => b.label)).toEqual(['Premium']);
+    expect(badgesFor({}, plain)).toEqual([]);
   });
 
   it('generates a deterministic, category-tinted placeholder data uri', () => {

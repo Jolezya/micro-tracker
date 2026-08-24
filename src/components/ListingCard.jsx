@@ -35,10 +35,10 @@ function BadgeChip({ badge }) {
   const cls = BADGE_STYLE[badge.kind] || 'text-white';
   return (
     <span
-      className={`inline-flex items-center gap-1 rounded-full px-2 py-1 text-[11px] font-bold ${cls}`}
+      className={`inline-flex items-center gap-0.5 rounded-full px-1.5 py-0.5 text-[10px] font-bold ${cls}`}
       style={badge.kind === 'sponsored' ? undefined : style}
     >
-      {Icon && <Icon size={11} strokeWidth={2.6} />}
+      {Icon && <Icon size={10} strokeWidth={2.6} />}
       {badge.label}
     </span>
   );
@@ -54,30 +54,33 @@ export function ListingCard({ listing, index = 0 }) {
       transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1], delay: Math.min(index * 0.03, 0.3) }}
     >
       <Link to={`/listing/${listing.id}`} className="group block">
-        {/* IMAGE — the primary element */}
-        <div className="relative aspect-[4/5] overflow-hidden rounded-3xl bg-elevated">
+        {/* IMAGE — prominent, but no longer dominating the whole card */}
+        <div className="relative aspect-square overflow-hidden rounded-3xl bg-elevated">
           <ListingImage
             listing={listing}
             className="h-full w-full transition-transform duration-500 group-hover:scale-[1.04]"
             eager={index < 4}
-            glyphSize={52}
+            glyphSize={48}
           />
-          <div className="pointer-events-none absolute inset-x-0 top-0 flex items-start justify-between p-2.5">
-            <div className="flex flex-col items-start gap-1.5">
+          <div className="pointer-events-none absolute inset-x-0 top-0 flex items-start justify-between p-2">
+            {/* placement/plan badge + trust badge — never more than two */}
+            <div className="flex min-w-0 flex-col items-start gap-1">
               {badges.map((b) => <BadgeChip key={b.label} badge={b} />)}
             </div>
-            <SaveButton id={listing.id} className="pointer-events-auto h-9 w-9 bg-black/25 backdrop-blur-md" />
+            <SaveButton id={listing.id} className="pointer-events-auto h-8 w-8 shrink-0 bg-black/25 backdrop-blur-md" />
           </div>
         </div>
-        {/* PRICE → TITLE → LOCATION */}
-        <div className="px-1 pt-2.5">
+        {/* PRICE → TITLE → LOCATION · TIME */}
+        <div className="px-1 pt-2">
           <div className="flex items-baseline justify-between gap-2">
-            <p className="truncate text-[15px] font-extrabold text-ink">{formatPrice(listing)}</p>
-            {listing.negotiable && <span className="shrink-0 text-[11px] font-medium text-faint">Negotiable</span>}
+            <p className="truncate text-[15px] font-extrabold leading-tight text-ink">{formatPrice(listing)}</p>
+            {listing.negotiable && <span className="shrink-0 text-[10px] font-medium text-faint">Negotiable</span>}
           </div>
-          <p className="mt-0.5 line-clamp-1 text-sm text-muted">{listing.title}</p>
-          <div className="mt-1 flex items-center gap-1 text-xs text-faint">
-            <MapPin size={12} />
+          {/* two lines reserved so titles never truncate mid-word and every
+              card in a row lines up */}
+          <p className="mt-1 line-clamp-2 min-h-[2.75em] text-[13px] font-medium leading-snug text-ink">{listing.title}</p>
+          <div className="mt-0.5 flex items-center gap-1 text-[11px] text-faint">
+            <MapPin size={11} className="shrink-0" />
             <span className="truncate">{listing.location?.area || listing.location?.city}</span>
             <span aria-hidden>·</span>
             <span className="shrink-0">{timeAgo(listing.postedAt)}</span>
@@ -121,8 +124,8 @@ export function ListingRow({ listing }) {
 export function ListingCardSkeleton() {
   return (
     <div>
-      <Skeleton className="aspect-[4/5] w-full rounded-3xl" />
-      <div className="space-y-2 px-1 pt-2.5">
+      <Skeleton className="aspect-square w-full rounded-3xl" />
+      <div className="space-y-1.5 px-1 pt-2">
         <Skeleton className="h-4 w-1/2" />
         <Skeleton className="h-3.5 w-4/5" />
         <Skeleton className="h-3 w-2/3" />

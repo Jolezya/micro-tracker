@@ -29,6 +29,36 @@ function Rail({ children }) {
   );
 }
 
+// Carousel card width: ~two full cards plus a deliberate slice of the next, so
+// the peek reads as "swipe for more" rather than an accidental crop. Capped so
+// tablets/desktop simply fit more cards instead of inflating them.
+function RailCard({ listing }) {
+  return (
+    <div className="w-[40vw] min-w-[132px] max-w-[172px] shrink-0">
+      <ListingCard listing={listing} />
+    </div>
+  );
+}
+
+// Section heading with a one-line purpose so each rail's intent is obvious.
+function RailHeader({ icon, title, note, action, to = '/search' }) {
+  return (
+    <div className="mb-3 flex items-center justify-between gap-3 px-1">
+      <div className="min-w-0">
+        <h2 className="flex items-center gap-2 text-lg font-bold tracking-tight text-ink">
+          {icon} {title}
+        </h2>
+        {note && <p className="mt-0.5 truncate text-xs text-faint">{note}</p>}
+      </div>
+      {action && (
+        <Link to={to} className="press shrink-0 text-sm font-semibold text-accent">
+          {action}
+        </Link>
+      )}
+    </div>
+  );
+}
+
 // One category tile: premium 3D icon + readable name. Width is driven by the
 // grid cell; auto-hyphenation lets long single-word names wrap to a clean two
 // lines instead of breaking awkwardly.
@@ -189,61 +219,47 @@ export default function Home() {
           <section className="mt-8">
             <SectionHeader title="Recently viewed" action="Clear" onAction={() => {}} />
             <Rail>
-              {recent.map((l) => (
-                <div key={l.id} className="w-40 shrink-0 sm:w-44">
-                  <ListingCard listing={l} />
-                </div>
-              ))}
+              {recent.map((l) => <RailCard key={l.id} listing={l} />)}
             </Rail>
           </section>
         )}
 
-        {/* Trending */}
+        {/* Trending — what buyers are looking at right now */}
         <section className="mt-8">
-          <div className="mb-3 flex items-center gap-2 px-1">
-            <TrendingUp size={20} className="text-accent" />
-            <h2 className="text-lg font-bold tracking-tight text-ink">Trending now</h2>
-          </div>
+          <RailHeader
+            icon={<TrendingUp size={19} className="text-accent" />}
+            title="Trending now"
+            note="Most viewed by buyers this week"
+            action="See all"
+          />
           <Rail>
-            {trending.map((l) => (
-              <div key={l.id} className="w-40 shrink-0 sm:w-44">
-                <ListingCard listing={l} />
-              </div>
-            ))}
+            {trending.map((l) => <RailCard key={l.id} listing={l} />)}
           </Rail>
         </section>
 
-        {/* Premium picks */}
+        {/* Premium picks — seller-promoted, higher-tier listings */}
         <section className="mt-8">
-          <div className="mb-3 flex items-center justify-between px-1">
-            <h2 className="flex items-center gap-2 text-lg font-bold tracking-tight text-ink">
-              <Sparkles size={19} className="text-gold" /> Premium picks
-            </h2>
-            <Link to="/search" className="text-sm font-semibold text-accent">
-              See all
-            </Link>
-          </div>
+          <RailHeader
+            icon={<Sparkles size={19} className="text-gold" />}
+            title="Premium picks"
+            note="Promoted listings from Premium & Gold sellers"
+            action="See all"
+          />
           <Rail>
-            {premium.map((l) => (
-              <div key={l.id} className="w-40 shrink-0 sm:w-44">
-                <ListingCard listing={l} />
-              </div>
-            ))}
+            {premium.map((l) => <RailCard key={l.id} listing={l} />)}
           </Rail>
         </section>
 
         {/* Nearby */}
         <section className="mt-8">
-          <div className="mb-3 flex items-center gap-2 px-1">
-            <MapPin size={19} className="text-accent" />
-            <h2 className="text-lg font-bold tracking-tight text-ink">Nearby</h2>
-          </div>
+          <RailHeader
+            icon={<MapPin size={19} className="text-accent" />}
+            title="Nearby"
+            note={`Close to ${CURRENT_USER.location.split(',')[0]}`}
+            action="See all"
+          />
           <Rail>
-            {nearby.map((l) => (
-              <div key={l.id} className="w-40 shrink-0 sm:w-44">
-                <ListingCard listing={l} />
-              </div>
-            ))}
+            {nearby.map((l) => <RailCard key={l.id} listing={l} />)}
           </Rail>
         </section>
 
