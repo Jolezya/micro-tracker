@@ -8,7 +8,7 @@ export const CATEGORIES = [
     color: '#2563eb',
     blurb: 'Cars, EVs & more',
     facets: ['brand', 'year', 'mileage', 'fuel', 'transmission', 'color'],
-    subcategories: ['Cars', 'Electric', 'Vans', 'Classic', 'Parts'],
+    subcategories: ['Cars', 'SUVs', 'Vans', 'Trucks', 'Motorcycles', 'Boats', 'Classic', 'Commercial', 'Electric', 'Parts & accessories'],
   },
   {
     id: 'property',
@@ -17,7 +17,7 @@ export const CATEGORIES = [
     color: '#0ea5e9',
     blurb: 'Homes & rentals',
     facets: ['type', 'bedrooms', 'size', 'ownership'],
-    subcategories: ['For sale', 'For rent', 'Cabins', 'Plots', 'Commercial'],
+    subcategories: ['Houses', 'Apartments', 'Plots', 'Commercial', 'Offices', 'Retail', 'Industrial', 'Holiday', 'For sale', 'For rent'],
   },
   {
     id: 'electronics',
@@ -49,7 +49,7 @@ export const CATEGORIES = [
   {
     id: 'sports',
     label: 'Sports',
-    icon: 'Bike',
+    icon: 'Dumbbell',
     color: '#16a34a',
     blurb: 'Bikes & outdoor',
     facets: ['brand', 'condition', 'size'],
@@ -98,7 +98,7 @@ export const CATEGORIES = [
     color: '#4f46e5',
     blurb: 'Roles & careers',
     facets: ['type', 'remote'],
-    subcategories: ['Full-time', 'Part-time', 'Contract', 'Remote'],
+    subcategories: ['Full-time', 'Part-time', 'Contract', 'Internship', 'Remote', 'Temporary', 'Graduate'],
   },
   {
     id: 'services',

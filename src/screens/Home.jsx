@@ -5,8 +5,7 @@ import { Search, Bell, Sun, Moon, MapPin, TrendingUp, Clock, Sparkles, ChevronRi
 import { Container } from '../components/layout/Header.jsx';
 import { Logo } from '../components/layout/Logo.jsx';
 import { ListingCard, ListingCardSkeleton } from '../components/ListingCard.jsx';
-import { ListingImage } from '../components/ListingImage.jsx';
-import { CategoryIcon } from '../components/CategoryIcon.jsx';
+import { Category3DIcon } from '../components/Category3DIcon.jsx';
 import { SectionHeader } from '../components/ui/kit.jsx';
 import { useToast } from '../components/ui/Toast.jsx';
 import { runNaturalSearch } from '../lib/nlSearch.js';
@@ -140,28 +139,22 @@ export default function Home() {
           </div>
         </motion.div>
 
-        {/* Categories */}
+        {/* Categories — compact premium icon directory */}
         <div className="mt-6">
           <SectionHeader title="Browse categories" />
-          <Rail>
-            {CATEGORIES.map((c) => {
-              const rep = all.find((l) => l.category === c.id) || { id: c.id, category: c.id };
-              return (
-                <Link key={c.id} to={`/category/${c.id}`} className="press w-28 shrink-0">
-                  <div className="relative aspect-[4/3] w-full overflow-hidden rounded-2xl">
-                    <ListingImage listing={rep} className="h-full w-full" glyphSize={30} minimal />
-                    <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/55 via-black/5 to-transparent" />
-                    <div className="absolute inset-x-0 bottom-0 flex items-center gap-1.5 p-2">
-                      <span className="grid h-5 w-5 place-items-center rounded-md bg-white/25 text-white backdrop-blur-sm">
-                        <CategoryIcon name={c.icon} size={12} />
-                      </span>
-                      <span className="text-xs font-bold text-white drop-shadow">{c.label}</span>
-                    </div>
-                  </div>
-                </Link>
-              );
-            })}
-          </Rail>
+          <div className="mt-1 grid grid-cols-4 gap-x-2 gap-y-5 min-[400px]:grid-cols-5 sm:grid-cols-6 lg:grid-cols-8">
+            {CATEGORIES.map((c) => (
+              <Link
+                key={c.id}
+                to={`/category/${c.id}`}
+                aria-label={c.label}
+                className="press group flex flex-col items-center gap-2 text-center"
+              >
+                <Category3DIcon category={c} className="transition-transform group-hover:-translate-y-0.5" />
+                <span className="line-clamp-2 text-[11.5px] font-semibold leading-tight text-ink">{c.label}</span>
+              </Link>
+            ))}
+          </div>
         </div>
 
         {/* Recently viewed */}
