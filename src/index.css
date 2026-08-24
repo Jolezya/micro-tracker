@@ -34,6 +34,7 @@
   --zm-red: 222 32 16;
   --zm-black: 17 17 20;
   --zm-orange: 239 125 0;
+  --zm-stripe-ring: transparent;
 }
 
 :root[data-theme='dark'] {
@@ -57,12 +58,14 @@
   --glass-alpha: 0.62;
   --shadow-color: 0 0 0;
 
-  /* Flag accents lifted for contrast on dark; the black stripe inverts so it
-     stays visible against the dark background. */
+  /* Flag accents lifted for contrast on dark. The black stripe stays black —
+     a hairline ring around the bar keeps that segment readable as a black
+     band rather than a gap in the dark background. */
   --zm-green: 56 182 44;
   --zm-red: 240 96 82;
-  --zm-black: 236 237 241;
+  --zm-black: 0 0 0;
   --zm-orange: 247 152 40;
+  --zm-stripe-ring: rgb(255 255 255 / 0.22);
 }
 
 * {

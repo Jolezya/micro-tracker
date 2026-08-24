@@ -188,7 +188,11 @@ export default function Home() {
                 flag's red · black · orange stripes */}
             <span className="relative inline-block" style={{ color: 'rgb(var(--zm-green))' }}>
               Zambia's
-              <span aria-hidden className="absolute inset-x-0 -bottom-0.5 flex h-[3px] overflow-hidden rounded-full">
+              <span
+                aria-hidden
+                className="absolute inset-x-0 -bottom-0.5 flex h-[3px] overflow-hidden rounded-full"
+                style={{ boxShadow: '0 0 0 1px var(--zm-stripe-ring)' }}
+              >
                 <span className="flex-1" style={{ background: 'rgb(var(--zm-red))' }} />
                 <span className="flex-1" style={{ background: 'rgb(var(--zm-black))' }} />
                 <span className="flex-1" style={{ background: 'rgb(var(--zm-orange))' }} />
