@@ -29,54 +29,41 @@ function Rail({ children }) {
   );
 }
 
-// One category tile: premium 3D icon + readable name, fixed width so the two
-// carousel rows line up into columns and touch targets stay consistent.
-function CategoryTile({ c, size = 48 }) {
+// One category tile: premium 3D icon + readable name. Width is driven by the
+// grid cell; auto-hyphenation lets long single-word names wrap to a clean two
+// lines instead of breaking awkwardly.
+function CategoryTile({ c, size, labelClass }) {
   return (
     <Link
       to={`/category/${c.id}`}
       aria-label={c.label}
-      className="press group flex w-[68px] shrink-0 flex-col items-center gap-1.5 text-center sm:w-auto"
+      className="press group flex flex-col items-center gap-1 text-center"
     >
       <Category3DIcon category={c} size={size} className="transition-transform group-hover:-translate-y-0.5" />
-      <span className="line-clamp-2 text-[11px] font-semibold leading-tight text-ink">{c.label}</span>
+      <span className={`line-clamp-2 w-full hyphens-auto font-semibold leading-[1.15] text-ink [overflow-wrap:anywhere] ${labelClass}`}>
+        {c.label}
+      </span>
     </Link>
   );
 }
 
-// Mobile: exactly two rows, horizontally scrollable (swipe for more) with a
-// subtle right-edge fade as the only "more exists" cue. md+: a compact static
-// grid — all categories fit, so no carousel is forced.
-function CategoryCarousel() {
-  const mid = Math.ceil(CATEGORIES.length / 2);
-  const rows = [CATEGORIES.slice(0, mid), CATEGORIES.slice(mid)];
+// Compact, non-scrolling two-row directory: all 14 categories fit in a 7×2
+// grid, visible at once, reading left→right then onto the second row. Icons
+// shrink on phones and grow on larger screens, but it's always exactly two
+// rows — no horizontal scroll, no cut-off.
+function CategoryGrid() {
   return (
     <>
-      {/* Mobile carousel */}
-      <div className="relative md:hidden">
-        <div className="no-scrollbar -mx-4 overflow-x-auto scroll-px-4 px-4">
-          <div className="flex w-max flex-col gap-4 pb-1">
-            {rows.map((row, i) => (
-              <div key={i} className="flex gap-3">
-                {row.map((c) => (
-                  <CategoryTile key={c.id} c={c} />
-                ))}
-              </div>
-            ))}
-          </div>
-        </div>
-        {/* subtle right-edge fade → hints more categories to the right */}
-        <div
-          aria-hidden
-          className="pointer-events-none absolute inset-y-0 right-0 w-10"
-          style={{ background: 'linear-gradient(to right, rgb(var(--bg) / 0), rgb(var(--bg)))' }}
-        />
+      {/* phones: smaller icons + tight labels so all 14 fit two rows */}
+      <div className="mt-1 grid grid-cols-7 gap-x-0.5 gap-y-2.5 md:hidden">
+        {CATEGORIES.map((c) => (
+          <CategoryTile key={c.id} c={c} size={36} labelClass="text-[8.5px]" />
+        ))}
       </div>
-
-      {/* md+ compact grid — no carousel when everything fits */}
+      {/* md+: same two-row grid with room for larger icons */}
       <div className="mt-1 hidden grid-cols-7 gap-x-2 gap-y-4 md:grid">
         {CATEGORIES.map((c) => (
-          <CategoryTile key={c.id} c={c} />
+          <CategoryTile key={c.id} c={c} size={48} labelClass="text-[11px]" />
         ))}
       </div>
     </>
@@ -198,7 +185,7 @@ export default function Home() {
             md+: static grid — everything fits, no carousel needed. */}
         <div className="mt-6">
           <SectionHeader title="Browse categories" />
-          <CategoryCarousel />
+          <CategoryGrid />
         </div>
 
         {/* Recently viewed */}
