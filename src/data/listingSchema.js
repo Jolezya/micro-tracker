@@ -76,6 +76,8 @@ const VEHICLES = {
     { key: 'vehicleType', label: 'Vehicle type', type: 'chips', options: VEHICLE_TYPES, required: true },
     { key: 'make', label: 'Make / brand', type: 'select', options: VEHICLE_MAKE_NAMES, top: 'brand', required: true, placeholder: 'Search or type a brand…', helper: 'Not listed? Just type it in.' },
     { key: 'model', label: 'Model', type: 'select', dependsOn: 'make', placeholder: 'Select a make first…', optionsFrom: (v) => VEHICLE_MAKES[one(v.make)] || [], helper: 'Model not listed? Type it manually.' },
+    // only worth asking once we know the model — keeps the form short up front
+    { key: 'variant', label: 'Variant / trim', type: 'text', placeholder: 'e.g. GLE, Sport, 4x4', helper: 'Optional — buyers search by trim.', showIf: (v) => !!one(v.model) },
     { key: 'year', label: 'Year', type: 'number', min: 1980, max: 2026, helper: 'e.g. 2022' },
     { key: 'mileage', label: 'Mileage', type: 'number', unit: 'km', helper: 'e.g. 85,000 km' },
     { key: 'fuel', label: 'Fuel / power', type: 'chips', options: FUEL_TYPES },
@@ -187,6 +189,8 @@ const SERVICES = {
     { key: 'pricingModel', label: 'Pricing model', type: 'chips', options: SERVICE_PRICING, multi: false, required: true },
     { key: 'experience', label: 'Experience', type: 'chips', options: ['Under 1 year', '1–3 years', '3–5 years', '5+ years'] },
     { key: 'availability', label: 'Availability', type: 'chips', options: ['Weekdays', 'Weekends', 'Evenings', '24/7', 'By appointment'], multi: true },
+    { key: 'serviceArea', label: 'Service area', type: 'chips', options: ['Within my town', 'Province-wide', 'Nationwide', 'Online / remote'], multi: true, helper: 'How far will you travel for work?' },
+    { key: 'worksAt', label: 'Where you work', type: 'chips', options: ['I travel to clients', 'At my premises', 'Either'] },
     { key: 'qualification', label: 'Qualifications / certifications', type: 'text', helper: 'e.g. Licensed electrician' },
   ],
 };

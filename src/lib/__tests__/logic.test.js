@@ -413,6 +413,22 @@ describe('listing schema engine', () => {
     expect(opts).toContain('Corolla');
   });
 
+  it('only asks for a vehicle variant once a model is known', () => {
+    const schema = listingSchema('vehicles');
+    const early = visibleFields(schema, { vehicleType: ['Car'], make: 'Toyota' }).map((f) => f.key);
+    expect(early).not.toContain('variant');
+    const later = visibleFields(schema, { vehicleType: ['Car'], make: 'Toyota', model: 'Corolla' }).map((f) => f.key);
+    expect(later).toContain('variant');
+  });
+
+  it('asks service-specific questions including where the seller works', () => {
+    const keys = visibleFields(listingSchema('services'), {}).map((f) => f.key);
+    expect(keys).toEqual(expect.arrayContaining(['serviceCategory', 'pricingModel', 'availability', 'serviceArea', 'worksAt']));
+    // and never vehicle/condition questions
+    expect(keys).not.toContain('condition');
+    expect(keys).not.toContain('mileage');
+  });
+
   it('hides body type for motorcycles but shows it for cars', () => {
     const schema = listingSchema('vehicles');
     const car = visibleFields(schema, { vehicleType: ['Car'] });

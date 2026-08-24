@@ -253,14 +253,14 @@ export default function Sell() {
 function CategoryStep({ value, onSelect }) {
   return (
     <div>
-      <h2 className="text-2xl font-extrabold tracking-tight text-ink">What would you like to list?</h2>
-      <p className="mt-1 text-sm text-muted">Pick a category and Kaira builds the right form for it.</p>
-      <div className="mt-5 grid grid-cols-1 gap-3 min-[360px]:grid-cols-2 sm:grid-cols-3">
+      <h2 className="text-2xl font-extrabold tracking-tight text-ink">What are you listing?</h2>
+      <p className="mt-1 text-sm text-muted">Choose a category and Kaira will tailor the listing for you.</p>
+      <div className="mt-5 grid grid-cols-1 gap-2.5 min-[360px]:grid-cols-2 sm:grid-cols-3">
         {CATEGORIES.map((c) => (
           <button
             key={c.id}
             onClick={() => onSelect(c.id)}
-            className={`press flex min-w-0 items-center gap-2.5 rounded-2xl border p-3 text-left transition ${
+            className={`press flex min-w-0 items-center gap-2.5 rounded-2xl border p-2 text-left transition ${
               value === c.id ? 'border-accent bg-accent-soft' : 'border-hairline bg-surface hover:bg-elevated'
             }`}
           >

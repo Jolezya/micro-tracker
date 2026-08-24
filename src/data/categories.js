@@ -120,7 +120,7 @@ export const CATEGORIES = [
   },
   {
     id: 'everything',
-    label: 'Everything else',
+    label: 'Other',
     icon: 'Sparkles',
     color: '#64748b',
     blurb: 'Everything else',
