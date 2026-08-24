@@ -14,6 +14,7 @@ import { CATEGORIES, CATEGORY_MAP, CONDITIONS } from '../data/categories.js';
 import { CURRENT_USER } from '../data/users.js';
 import { LISTING_PLANS, LISTING_PLAN_MAP } from '../data/plans.js';
 import { PlanBenefitList } from '../components/plan/PlanUI.jsx';
+import { OptionChips } from '../components/filters/OptionChips.jsx';
 import { TOWNS_BY_PROVINCE, locationOf } from '../data/locations.js';
 import { useAllListings, useStore } from '../lib/store.jsx';
 import { placeholderDataUri } from '../lib/media.js';
@@ -115,6 +116,8 @@ export default function Sell() {
     navigate(`/listing/${listing.id}`);
   };
 
+  const recordCustom = (field, v) => dispatch({ type: 'RECORD_CUSTOM', field, value: v });
+
   return (
     <div className="pb-28 lg:pb-8">
       {/* Header + progress */}
@@ -180,6 +183,7 @@ export default function Sell() {
                 priceSuggestion={priceSuggestion}
                 openTowns={() => setShowTowns(true)}
                 toast={toast}
+                recordCustom={recordCustom}
               />
             )}
             {step === 3 && <ReviewStep form={form} plan={plan} cat={cat} goTo={setStep} />}
@@ -506,7 +510,7 @@ function CheckRow({ ok, warn, children }) {
 /* ------------------------------------------------------------------ */
 /* Step 3 — Details                                                    */
 /* ------------------------------------------------------------------ */
-function DetailsStep({ form, set, cat, detected, priceSuggestion, openTowns, toast }) {
+function DetailsStep({ form, set, cat, detected, priceSuggestion, openTowns, toast, recordCustom }) {
   const autofill = () => {
     if (!form.title.trim()) {
       toast('Add a title first, then AI can fill the rest', { type: 'info' });
@@ -523,11 +527,6 @@ function DetailsStep({ form, set, cat, detected, priceSuggestion, openTowns, toa
     }
     set(patch);
     toast('AI filled in category, description & price ✨');
-  };
-
-  const toggleDelivery = (d) => {
-    const has = form.delivery.includes(d);
-    set({ delivery: has ? form.delivery.filter((x) => x !== d) : [...form.delivery, d] });
   };
 
   return (
@@ -570,24 +569,32 @@ function DetailsStep({ form, set, cat, detected, priceSuggestion, openTowns, toa
           ))}
         </div>
         {cat && (
-          <div className="mt-2 flex flex-wrap gap-2">
-            {cat.subcategories.map((s) => (
-              <Chip key={s} active={form.subcategory === s} onClick={() => set({ subcategory: s })}>{s}</Chip>
-            ))}
+          <div className="mt-2">
+            <OptionChips
+              options={cat.subcategories}
+              value={form.subcategory ? [form.subcategory] : []}
+              onChange={(a) => set({ subcategory: a[0] || null })}
+              multi={false}
+              label="subcategory"
+              onCustom={(v) => recordCustom('subcategory', v)}
+            />
           </div>
         )}
       </Field>
 
       <Field label="Brand" optional>
-        <input value={form.brand} onChange={(e) => set({ brand: e.target.value })} placeholder="e.g. Apple" className="input" />
+        <input value={form.brand} onChange={(e) => set({ brand: e.target.value })} placeholder="e.g. Apple — or type any brand" className="input" />
       </Field>
 
       <Field label="Condition" required>
-        <div className="flex flex-wrap gap-2">
-          {CONDITIONS.map((c) => (
-            <Chip key={c} active={form.condition === c} onClick={() => set({ condition: c })}>{c}</Chip>
-          ))}
-        </div>
+        <OptionChips
+          options={CONDITIONS}
+          value={form.condition ? [form.condition] : []}
+          onChange={(a) => set({ condition: a[0] || form.condition })}
+          multi={false}
+          label="condition"
+          onCustom={(v) => recordCustom('condition', v)}
+        />
       </Field>
 
       <Field label="Price" required>
@@ -627,13 +634,14 @@ function DetailsStep({ form, set, cat, detected, priceSuggestion, openTowns, toa
       </Field>
 
       <Field label="How can buyers get it?" optional>
-        <div className="flex flex-wrap gap-2">
-          {DELIVERY_OPTIONS.map((d) => (
-            <Chip key={d} active={form.delivery.includes(d)} onClick={() => toggleDelivery(d)}>
-              <span className="flex items-center gap-1.5"><Truck size={13} /> {d}</span>
-            </Chip>
-          ))}
-        </div>
+        <OptionChips
+          options={DELIVERY_OPTIONS}
+          value={form.delivery}
+          onChange={(a) => set({ delivery: a })}
+          multi
+          label="option"
+          onCustom={(v) => recordCustom('delivery', v)}
+        />
       </Field>
 
       <Field label="Phone number" optional>

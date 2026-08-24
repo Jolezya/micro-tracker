@@ -17,6 +17,12 @@ from a single codebase. Add it to your home screen and it behaves like a native 
 
 ## ✨ Highlights
 
+- **Universal custom-value rule** — every predefined-option field (in the Sell flow *and* every
+  category's filters) offers **"Other / Not listed?" → enter manually**. Custom values save and
+  display like any standard value, multi-selects allow *Select + Add custom*, and Kaira's AI suggests
+  the closest standard option ("Mercedes" → *Did you mean Mercedes-Benz?*). Recurring custom entries
+  surface in the Admin **Suggested list additions** panel to grow the master lists. One rule, applied
+  once in the shared controls — so no list is ever a dead end.
 - **Natural-language AI search** — the search bar understands plain queries like *"used Toyota SUV
   under K500,000 in Lusaka"* and turns them into real filters (category, make/model, type, fuel,
   condition, price, location) via `lib/nlSearch.js`, shown as removable chips. The AI button is a

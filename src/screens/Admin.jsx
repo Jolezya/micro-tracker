@@ -6,7 +6,7 @@ import {
 } from 'recharts';
 import {
   Users, Package, TrendingUp, Flag, ShieldCheck, ChevronLeft, Check, Trash2,
-  CreditCard, Activity, LayoutGrid, ScrollText,
+  CreditCard, Activity, LayoutGrid, ScrollText, ListPlus,
 } from 'lucide-react';
 import { Container } from '../components/layout/Header.jsx';
 import { Badge, Avatar, Segmented } from '../components/ui/kit.jsx';
@@ -15,7 +15,7 @@ import { LISTINGS } from '../data/listings.js';
 import { USERS } from '../data/users.js';
 import { CATEGORIES, CATEGORY_MAP } from '../data/categories.js';
 import { PLANS } from '../data/plans.js';
-import { useAllListings } from '../lib/store.jsx';
+import { useAllListings, useStore } from '../lib/store.jsx';
 import { compactNumber, kr, timeAgo } from '../lib/format.js';
 
 const ACCENT = '#0f6c54';
@@ -174,6 +174,9 @@ export default function Admin() {
                 </div>
               </div>
             </div>
+
+            {/* Suggested list additions — custom values users typed for option fields */}
+            <SuggestedAdditions />
           </div>
         )}
 
@@ -225,6 +228,49 @@ export default function Admin() {
           </div>
         )}
       </Container>
+    </div>
+  );
+}
+
+function SuggestedAdditions() {
+  const { state } = useStore();
+  const { toast } = useToast();
+  const rows = Object.entries(state.customEntries || {})
+    .map(([k, count]) => {
+      const [field, value] = k.split('::');
+      return { field, value, count };
+    })
+    .sort((a, b) => b.count - a.count)
+    .slice(0, 12);
+
+  return (
+    <div className="rounded-3xl border border-hairline bg-surface p-4">
+      <h3 className="mb-1 flex items-center gap-2 font-bold text-ink"><ListPlus size={17} className="text-accent" /> Suggested list additions</h3>
+      <p className="mb-3 text-sm text-muted">Custom values people typed for option fields. Recurring ones are candidates for the official lists.</p>
+      {rows.length === 0 ? (
+        <p className="rounded-2xl border border-dashed border-line/20 p-6 text-center text-sm text-muted">
+          Nothing yet — when sellers or buyers use “Other / Not listed?”, their entries show here for review.
+        </p>
+      ) : (
+        <div className="divide-y divide-line/10">
+          {rows.map((r) => (
+            <div key={`${r.field}-${r.value}`} className="flex items-center gap-3 py-2.5">
+              <div className="min-w-0 flex-1">
+                <p className="truncate font-semibold text-ink">{r.value}</p>
+                <p className="text-xs text-muted">field: {r.field}</p>
+              </div>
+              {r.count >= 3 && <Badge tone="accent">×{r.count} · flag</Badge>}
+              {r.count < 3 && <span className="text-xs font-semibold text-faint">×{r.count}</span>}
+              <button
+                onClick={() => toast(`“${r.value}” added to the ${r.field} list`)}
+                className="press inline-flex items-center gap-1 rounded-full bg-accent-soft px-2.5 py-1 text-xs font-bold text-accent"
+              >
+                <ListPlus size={12} /> Add to list
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

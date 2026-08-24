@@ -1,17 +1,21 @@
 import React, { useMemo, useState } from 'react';
-import { Search, Check, MapPin, Navigation, ChevronDown } from 'lucide-react';
+import { Search, Check, MapPin, Navigation, Plus, Sparkles } from 'lucide-react';
 import { Chip, Switch } from '../ui/kit.jsx';
+import { OptionChips } from './OptionChips.jsx';
 import { PROVINCES, TOWNS_BY_PROVINCE, findTown } from '../../data/locations.js';
 import { resolveOptions } from '../../data/filterSchema.js';
+import { closestOption } from '../../lib/ai.js';
 import { kwacha } from '../../lib/format.js';
 
-// One control per filter type. All take (def, value, onChange, extra).
-export function FilterControl({ def, value, onChange, values }) {
+// One control per filter type. `onCustom(field, value)` is called when the user
+// enters a value not in the predefined list (for master-list improvement).
+export function FilterControl({ def, value, onChange, values, onCustom }) {
+  const recordCustom = (v) => onCustom?.(def.field || def.key, v);
   switch (def.type) {
     case 'chips':
-      return <ChipsControl def={def} value={value || []} onChange={onChange} />;
+      return <ChipsControl def={def} value={value || []} onChange={onChange} onCustom={recordCustom} />;
     case 'select':
-      return <SelectControl def={def} value={value || []} onChange={onChange} values={values} />;
+      return <SelectControl def={def} value={value || []} onChange={onChange} values={values} onCustom={recordCustom} />;
     case 'price':
     case 'range':
       return <RangeControl def={def} value={value || { min: null, max: null }} onChange={onChange} />;
@@ -24,28 +28,26 @@ export function FilterControl({ def, value, onChange, values }) {
   }
 }
 
-// ---------------- Chips (single/multi) ----------------
-function ChipsControl({ def, value, onChange }) {
-  const multi = def.multi !== false;
-  const toggle = (o) => {
-    if (multi) onChange(value.includes(o) ? value.filter((x) => x !== o) : [...value, o]);
-    else onChange(value.includes(o) ? [] : [o]);
-  };
+// ---------------- Chips (single/multi) with universal custom-value rule ----------------
+function ChipsControl({ def, value, onChange, onCustom }) {
   return (
-    <div className="flex flex-wrap gap-2">
-      {def.options.map((o) => (
-        <Chip key={o} active={value.includes(o)} onClick={() => toggle(o)}>
-          {o}
-        </Chip>
-      ))}
-    </div>
+    <OptionChips
+      options={def.options || []}
+      value={value}
+      onChange={onChange}
+      multi={def.multi !== false}
+      allowCustom={def.noCustom !== true}
+      label={def.label.toLowerCase()}
+      onCustom={onCustom}
+    />
   );
 }
 
-// ---------------- Searchable select (long lists) ----------------
-function SelectControl({ def, value, onChange, values }) {
+// ---------------- Searchable select (long lists) with custom-value rule ----------------
+function SelectControl({ def, value, onChange, values, onCustom }) {
   const [q, setQ] = useState('');
   const multi = def.multi !== false;
+  const allowCustom = def.noCustom !== true;
   const options = useMemo(() => resolveOptions(def, values || {}), [def, values]);
 
   if (def.dependsOn && options.length === 0) {
@@ -53,26 +55,67 @@ function SelectControl({ def, value, onChange, values }) {
   }
   const needle = q.trim().toLowerCase();
   const filtered = needle ? options.filter((o) => o.toLowerCase().includes(needle)) : options;
+  const customSelected = value.filter((v) => !options.includes(v));
+  const exactExists = needle && options.some((o) => o.toLowerCase() === needle);
+  const near = allowCustom && needle && !exactExists ? closestOption(q.trim(), options) : null;
+
+  const add = (o) => {
+    if (multi) { if (!value.includes(o)) onChange([...value, o]); }
+    else onChange([o]);
+  };
   const toggle = (o) => {
     if (multi) onChange(value.includes(o) ? value.filter((x) => x !== o) : [...value, o]);
     else onChange(value.includes(o) ? [] : [o]);
   };
+  const addCustom = () => {
+    const val = q.trim();
+    if (!val) return;
+    add(val);
+    onCustom?.(val);
+    setQ('');
+  };
 
   return (
     <div>
-      {options.length > 6 && (
-        <div className="relative mb-2">
-          <Search size={16} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-faint" />
-          <input
-            value={q}
-            onChange={(e) => setQ(e.target.value)}
-            placeholder={def.placeholder || 'Search…'}
-            className="focus-ring h-10 w-full rounded-xl border border-hairline bg-elevated pl-9 pr-3 text-sm text-ink placeholder:text-faint"
-          />
-        </div>
+      <div className="relative mb-2">
+        <Search size={16} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-faint" />
+        <input
+          value={q}
+          onChange={(e) => setQ(e.target.value)}
+          onKeyDown={(e) => { if (e.key === 'Enter' && near?.exact === false) { e.preventDefault(); addCustom(); } }}
+          placeholder={def.placeholder || 'Search or type your own…'}
+          className="focus-ring h-10 w-full rounded-xl border border-hairline bg-elevated pl-9 pr-3 text-sm text-ink placeholder:text-faint"
+        />
+      </div>
+
+      {/* did-you-mean suggestion */}
+      {near && !near.exact && (
+        <button onClick={() => { add(near.match); setQ(''); }} className="press mb-2 inline-flex items-center gap-1.5 rounded-full bg-accent-soft px-3 py-1.5 text-xs font-semibold text-accent">
+          <Sparkles size={12} /> Did you mean {near.match}?
+        </button>
       )}
+
       <div className="thin-scrollbar max-h-56 overflow-y-auto rounded-xl border border-hairline">
-        {filtered.length === 0 && <p className="px-3 py-3 text-sm text-faint">No match</p>}
+        {/* custom selected values render like normal rows */}
+        {customSelected.map((o) => (
+          <button
+            key={o}
+            onClick={() => onChange(value.filter((x) => x !== o))}
+            className="press flex w-full items-center justify-between border-b border-hairline bg-accent-soft px-3 py-2.5 text-left text-sm font-semibold text-accent last:border-0"
+          >
+            <span>{o} <span className="text-[11px] font-medium opacity-70">· custom</span></span>
+            <Check size={16} />
+          </button>
+        ))}
+
+        {/* add-custom row */}
+        {allowCustom && needle && !exactExists && (
+          <button onClick={addCustom} className="press flex w-full items-center gap-2 border-b border-hairline px-3 py-2.5 text-left text-sm font-semibold text-accent last:border-0 hover:bg-elevated">
+            <Plus size={15} /> Add “{q.trim()}”
+          </button>
+        )}
+
+        {filtered.length === 0 && !needle && <p className="px-3 py-3 text-sm text-faint">Type to search…</p>}
         {filtered.map((o) => {
           const active = value.includes(o);
           return (

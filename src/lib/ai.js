@@ -186,6 +186,55 @@ function similarity(a, b) {
   return s;
 }
 
+// ---------- Custom-value matching ("did you mean?") ----------
+// Given a user-typed value and a list of standard options, return the closest
+// standard option (or null). Used to suggest e.g. "Mercedes" → "Mercedes-Benz".
+export function closestOption(input, options = []) {
+  const q = normKey(input);
+  if (!q || !options.length) return null;
+  const exact = options.find((o) => normKey(o) === q);
+  if (exact) return { match: exact, exact: true };
+  // containment either way ("mercedes" ⊂ "mercedesbenz"), but only when both
+  // strings are long enough — avoids spurious hits like "car" ⊂ "golfcart".
+  const contains = options.find((o) => {
+    const n = normKey(o);
+    if (Math.min(q.length, n.length) < 4) return false;
+    return n.includes(q) || q.includes(n);
+  });
+  if (contains) return { match: contains, exact: false };
+  // fuzzy (typo tolerance)
+  let best = null;
+  let bestD = Infinity;
+  for (const o of options) {
+    const d = levenshtein(q, normKey(o));
+    if (d < bestD) { bestD = d; best = o; }
+  }
+  const threshold = Math.max(1, Math.floor(q.length * 0.34));
+  return best && bestD <= threshold ? { match: best, exact: false } : null;
+}
+
+function normKey(s = '') {
+  return String(s).toLowerCase().replace(/[^a-z0-9]/g, '');
+}
+function levenshtein(a, b) {
+  const m = a.length;
+  const n = b.length;
+  if (!m) return n;
+  if (!n) return m;
+  const prev = Array.from({ length: n + 1 }, (_, j) => j);
+  for (let i = 1; i <= m; i++) {
+    let diag = prev[0];
+    prev[0] = i;
+    for (let j = 1; j <= n; j++) {
+      const tmp = prev[j];
+      const cost = a[i - 1] === b[j - 1] ? 0 : 1;
+      prev[j] = Math.min(prev[j] + 1, prev[j - 1] + 1, diag + cost);
+      diag = tmp;
+    }
+  }
+  return prev[n];
+}
+
 // ---------- utils ----------
 function cap(s) {
   if (!s) return '';

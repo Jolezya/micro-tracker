@@ -7,7 +7,7 @@ import { LISTINGS } from '../../data/listings.js';
 import { schemaFor } from '../../data/filterSchema.js';
 import { planBenefits, boostReach, LISTING_PLANS, BOOST_OPTIONS } from '../../data/plans.js';
 import { parseQuery } from '../nlSearch.js';
-import { detectCategory, suggestPrice, suggestTitle, generateDescription, isDuplicate, fraudScore, recommend } from '../ai.js';
+import { detectCategory, suggestPrice, suggestTitle, generateDescription, isDuplicate, fraudScore, recommend, closestOption } from '../ai.js';
 import { kwacha, kwachaCompact, timeAgo, distanceKm, formatDistance, compactNumber, initials, formatPrice } from '../format.js';
 import { placeholderDataUri, resolveKind, coverPhoto, realPhotos } from '../media.js';
 import { TOWNS_FULL, TOWN_NAMES, findTown, townCoords, locationOf, PROVINCES } from '../../data/locations.js';
@@ -247,6 +247,19 @@ describe('category-aware filter framework', () => {
     expect(countActiveSchema(vSchema, values)).toBe(2);
     const list = activeFilterList(vSchema, values);
     expect(list.map((x) => x.def.key).sort()).toEqual(['make', 'price']);
+  });
+});
+
+describe('custom values — "did you mean?"', () => {
+  const makes = ['Toyota', 'BMW', 'Mercedes-Benz', 'Nissan', 'Volkswagen'];
+  it('matches containment and typos to a standard option', () => {
+    expect(closestOption('Mercedes', makes).match).toBe('Mercedes-Benz');
+    expect(closestOption('toyta', makes).match).toBe('Toyota');
+    expect(closestOption('bmw', makes)).toEqual({ match: 'BMW', exact: true });
+  });
+  it('returns null for a genuinely new value (e.g. BYD)', () => {
+    expect(closestOption('BYD', makes)).toBeNull();
+    expect(closestOption('', makes)).toBeNull();
   });
 });
 

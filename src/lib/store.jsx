@@ -112,6 +112,9 @@ const initialState = {
   onboarded: false,
   // Persisted search UI state. `filters` is keyed by category id ('all' for none).
   search: { q: '', sort: 'relevant', view: 'grid', filters: {} },
+  // Custom values users typed for option fields → { "field::value": count } for
+  // master-list improvement (surfaced in Admin once they recur).
+  customEntries: {},
 };
 
 function load() {
@@ -313,6 +316,11 @@ function reducer(state, action) {
         ...state,
         notifications: state.notifications.map((n) => (n.id === action.id ? { ...n, read: true } : n)),
       };
+
+    case 'RECORD_CUSTOM': {
+      const key = `${action.field}::${action.value}`;
+      return { ...state, customEntries: { ...state.customEntries, [key]: (state.customEntries[key] || 0) + 1 } };
+    }
 
     case 'PATCH_SEARCH':
       return { ...state, search: { ...state.search, ...action.patch } };

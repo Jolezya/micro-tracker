@@ -97,6 +97,7 @@ export default function Search() {
   const clearAll = () => commit({});
 
   const setSearchQ = (q) => dispatch({ type: 'PATCH_SEARCH', patch: { q } });
+  const recordCustom = (field, val) => dispatch({ type: 'RECORD_CUSTOM', field, value: val });
   const askAI = () => {
     const text = (search.q || '').trim();
     if (!text) return;
@@ -270,6 +271,7 @@ export default function Search() {
         committed={values}
         origin={ORIGIN}
         onApply={commit}
+        onCustom={recordCustom}
         title={activeCat ? `Filter ${activeCat.label}` : 'Filters'}
       />
 
@@ -282,6 +284,7 @@ export default function Search() {
         base={base}
         committed={values}
         origin={ORIGIN}
+        onCustom={recordCustom}
         onApply={(key, v) => { setValue(key, v); setQuickKey(null); }}
         onClear={(key) => { removeFilter(key); setQuickKey(null); }}
       />
@@ -290,7 +293,7 @@ export default function Search() {
 }
 
 /* ---------------- Full filter sheet ---------------- */
-function FilterSheet({ open, onClose, schema, base, committed, origin, onApply, title }) {
+function FilterSheet({ open, onClose, schema, base, committed, origin, onApply, onCustom, title }) {
   const [pending, setPending] = useState(committed);
   useEffect(() => { if (open) setPending(committed); }, [open]); // reseed on open
 
@@ -322,7 +325,7 @@ function FilterSheet({ open, onClose, schema, base, committed, origin, onApply, 
               {def.label}
               {isFilterActive(def, pending[def.key]) && <span className="h-1.5 w-1.5 rounded-full bg-accent" />}
             </h3>
-            <FilterControl def={def} value={pending[def.key]} onChange={(v) => setV(def.key, v)} values={pending} />
+            <FilterControl def={def} value={pending[def.key]} onChange={(v) => setV(def.key, v)} values={pending} onCustom={onCustom} />
           </div>
         ))}
       </div>
@@ -331,7 +334,7 @@ function FilterSheet({ open, onClose, schema, base, committed, origin, onApply, 
 }
 
 /* ---------------- Single quick filter sheet ---------------- */
-function QuickFilterSheet({ def, open, onClose, schema, base, committed, origin, onApply, onClear }) {
+function QuickFilterSheet({ def, open, onClose, schema, base, committed, origin, onApply, onClear, onCustom }) {
   const [pending, setPending] = useState(committed[def?.key]);
   useEffect(() => { if (open && def) setPending(committed[def.key]); }, [open, def?.key]); // eslint-disable-line
 
@@ -358,7 +361,7 @@ function QuickFilterSheet({ def, open, onClose, schema, base, committed, origin,
       }
     >
       <div className="py-2">
-        <FilterControl def={def} value={pending} onChange={setPending} values={committed} />
+        <FilterControl def={def} value={pending} onChange={setPending} values={committed} onCustom={onCustom} />
       </div>
     </Sheet>
   );
