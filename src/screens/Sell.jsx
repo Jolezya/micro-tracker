@@ -149,7 +149,7 @@ export default function Sell() {
     [schema, form.fv, brand, condition]
   );
   const canReview =
-    !!form.title.trim() && form.photos.length > 0 && reqMissing.length === 0 &&
+    !!form.title.trim() && (isJob || form.photos.length > 0) && reqMissing.length === 0 &&
     (isJob || form.onRequest || !!form.price);
 
   const next = () => setStep((s) => Math.min(STEPS.length - 1, s + 1));
@@ -197,7 +197,7 @@ export default function Sell() {
           <motion.div key={step} initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} transition={{ duration: 0.26, ease: [0.22, 1, 0.36, 1] }}>
             {step === 0 && <CategoryStep value={form.category} onSelect={(id) => { set({ category: id, fv: {} }); setStep(1); }} />}
             {step === 1 && <PlanStep value={form.listingPlan} onSelect={(id) => set({ listingPlan: id })} category={form.category} />}
-            {step === 2 && <PhotoStep form={form} set={set} plan={plan} slots={schema.photoSlots} enhancing={enhancing} setEnhancing={setEnhancing} toast={toast} />}
+            {step === 2 && <PhotoStep form={form} set={set} plan={plan} slots={schema.photoSlots} isJob={isJob} enhancing={enhancing} setEnhancing={setEnhancing} toast={toast} />}
             {step === 3 && (
               <DetailsStep
                 form={form} set={set} setFv={setFv} schema={schema} cat={cat} isJob={isJob}
@@ -215,7 +215,11 @@ export default function Sell() {
         <div className="fixed inset-x-0 bottom-[68px] z-40 lg:bottom-0">
           <div className="glass mx-auto flex max-w-3xl items-center gap-3 border-t px-4 py-3 pb-safe">
             {step === 1 && <Button full size="lg" onClick={next}>Continue with {plan.name} <ChevronRight size={18} /></Button>}
-            {step === 2 && <Button full size="lg" onClick={next} disabled={form.photos.length === 0}>Continue <ChevronRight size={18} /></Button>}
+            {step === 2 && (
+              <Button full size="lg" onClick={next} disabled={!isJob && form.photos.length === 0}>
+                {isJob && form.photos.length === 0 ? 'Skip photos' : 'Continue'} <ChevronRight size={18} />
+              </Button>
+            )}
             {step === 3 && (
               <div className="flex-1">
                 {reqMissing.length > 0 && <p className="mb-1 px-1 text-center text-xs text-warning">Still needed: {reqMissing.join(', ')}</p>}
@@ -321,7 +325,7 @@ function Fact({ children }) {
 /* ------------------------------------------------------------------ */
 /* Step 3 — Photos                                                     */
 /* ------------------------------------------------------------------ */
-function PhotoStep({ form, set, plan, slots, enhancing, setEnhancing, toast }) {
+function PhotoStep({ form, set, plan, slots, isJob, enhancing, setEnhancing, toast }) {
   const count = form.photos.length;
   const limit = plan.photoLimit;
   const fileRef = useRef(null);
@@ -353,8 +357,12 @@ function PhotoStep({ form, set, plan, slots, enhancing, setEnhancing, toast }) {
 
   return (
     <div>
-      <h2 className="text-xl font-extrabold text-ink">Add photos</h2>
-      <p className="mt-1 text-sm text-muted">Add {REC_PHOTOS}+ for best results. Drag to reorder — the first is your cover.</p>
+      <h2 className="text-xl font-extrabold text-ink">Add photos {isJob && <span className="text-sm font-semibold text-muted">· optional</span>}</h2>
+      <p className="mt-1 text-sm text-muted">
+        {isJob
+          ? 'Optional for jobs — a company logo or workplace photo helps, but you can skip this.'
+          : `Add ${REC_PHOTOS}+ for best results. Drag to reorder — the first is your cover.`}
+      </p>
 
       {/* category-specific suggested shots */}
       {slots?.length > 0 && (
@@ -371,7 +379,7 @@ function PhotoStep({ form, set, plan, slots, enhancing, setEnhancing, toast }) {
         <div className="flex-1">
           <div className="flex items-center justify-between text-sm">
             <span className="font-semibold text-ink">{count} of {limit >= 40 ? '∞' : limit} photos</span>
-            <span className={enough ? 'text-success' : 'text-muted'}>{enough ? 'Looking good!' : `Add ${Math.max(0, 3 - count)} more`}</span>
+            <span className={enough ? 'text-success' : 'text-muted'}>{enough ? 'Looking good!' : isJob ? 'Optional' : `Add ${Math.max(0, 3 - count)} more`}</span>
           </div>
           <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-ink/10">
             <div className="h-full rounded-full bg-accent transition-all" style={{ width: `${Math.min(100, (count / REC_PHOTOS) * 100)}%` }} />
@@ -566,7 +574,7 @@ function DetailsStep({ form, set, setFv, schema, cat, isJob, brand, condition, o
 /* Step 5 — Review                                                     */
 /* ------------------------------------------------------------------ */
 function ReviewStep({ form, schema, plan, cat, brand, condition, goTo }) {
-  const cover = form.photos[0]?.src;
+  const cover = form.photos[0]?.src || placeholderDataUri({ category: form.category, attrs: {}, title: form.title });
   const specs = useMemo(() => {
     return visibleFields(schema, form.fv)
       .map((f) => {
@@ -591,7 +599,7 @@ function ReviewStep({ form, schema, plan, cat, brand, condition, goTo }) {
 
       <div className="overflow-hidden rounded-3xl border border-hairline bg-surface">
         <div className="relative aspect-[4/3] w-full bg-elevated">
-          {cover ? <img src={cover} alt="" className="h-full w-full object-cover" /> : <div className="grid h-full place-items-center text-faint">No photo</div>}
+          <img src={cover} alt="" className="h-full w-full object-cover" />
           {plan.badge && <span className="absolute left-3 top-3 inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-bold text-white" style={{ background: plan.accent }}>{plan.emoji} {plan.badge}</span>}
           {form.photos.length > 1 && <span className="absolute bottom-3 right-3 rounded-full bg-black/50 px-2 py-0.5 text-xs font-semibold text-white">1 / {form.photos.length}</span>}
         </div>
@@ -617,7 +625,7 @@ function ReviewStep({ form, schema, plan, cat, brand, condition, goTo }) {
 
       <div className="mt-4 space-y-2">
         <EditRow label="Category" value={cat?.label} onClick={() => goTo(0)} />
-        <EditRow label="Photos" value={`${form.photos.length} added`} onClick={() => goTo(2)} />
+        <EditRow label="Photos" value={form.photos.length ? `${form.photos.length} added` : 'None added'} onClick={() => goTo(2)} />
         <EditRow label="Details" value={form.title || 'Add details'} onClick={() => goTo(3)} />
       </div>
 
