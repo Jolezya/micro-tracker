@@ -6,7 +6,7 @@ import {
   MapPin, Tag, Eye, Star, GripVertical, Phone, Pencil, Info,
 } from 'lucide-react';
 import { Container } from '../components/layout/Header.jsx';
-import { CategoryIcon } from '../components/CategoryIcon.jsx';
+import { Category3DIcon } from '../components/Category3DIcon.jsx';
 import { Button, Badge, Spinner } from '../components/ui/kit.jsx';
 import { Sheet } from '../components/ui/Sheet.jsx';
 import { useToast } from '../components/ui/Toast.jsx';
@@ -264,9 +264,7 @@ function CategoryStep({ value, onSelect }) {
               value === c.id ? 'border-accent bg-accent-soft' : 'border-hairline bg-surface hover:bg-elevated'
             }`}
           >
-            <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl" style={{ background: `${c.color}1f`, color: c.color }}>
-              <CategoryIcon name={c.icon} size={21} />
-            </span>
+            <Category3DIcon category={c} size={40} />
             <span className="min-w-0 break-words text-[15px] font-bold leading-tight text-ink">{c.label}</span>
           </button>
         ))}
