@@ -173,7 +173,7 @@ export default function Sell() {
               <ChevronLeft size={20} />
             </button>
             <div className="flex-1">
-              <h1 className="text-lg font-bold text-ink">{cat ? `Sell your ${cat.label.toLowerCase()}` : 'Sell an item'}</h1>
+              <h1 className="text-lg font-bold text-ink">{cat ? `List your ${cat.label.toLowerCase()}` : 'List an item'}</h1>
               <p className="text-xs text-muted">Step {step + 1} of {STEPS.length} · {STEPS[step]}</p>
             </div>
             <span className="inline-flex items-center gap-1 rounded-full bg-ink/5 px-2.5 py-1 text-xs font-semibold text-muted">
@@ -238,7 +238,7 @@ export default function Sell() {
 function CategoryStep({ value, onSelect }) {
   return (
     <div>
-      <h2 className="text-2xl font-extrabold tracking-tight text-ink">What are you selling?</h2>
+      <h2 className="text-2xl font-extrabold tracking-tight text-ink">What would you like to list?</h2>
       <p className="mt-1 text-sm text-muted">Pick a category and Kaira builds the right form for it.</p>
       <div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-3">
         {CATEGORIES.map((c) => (
