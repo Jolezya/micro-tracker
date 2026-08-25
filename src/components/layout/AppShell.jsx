@@ -69,14 +69,14 @@ function BottomNav() {
                     brand-tinted shadow and a 1px top highlight for depth —
                     no gloss, no heavy gradient. */}
                 <span
-                  className="grid h-11 w-11 -translate-y-3 place-items-center rounded-[16px] text-accent-ink"
+                  className="grid h-10 w-10 -translate-y-2.5 place-items-center rounded-[15px] text-accent-ink"
                   style={{
                     background: 'rgb(var(--accent))',
                     boxShadow:
-                      '0 7px 16px -6px rgb(var(--accent) / 0.48), 0 2px 4px -2px rgb(var(--shadow-color) / 0.24), inset 0 1px 0 rgb(255 255 255 / 0.2)',
+                      '0 6px 14px -6px rgb(var(--accent) / 0.46), 0 2px 4px -2px rgb(var(--shadow-color) / 0.22), inset 0 1px 0 rgb(255 255 255 / 0.2)',
                   }}
                 >
-                  <Icon size={22} strokeWidth={2.4} />
+                  <Icon size={21} strokeWidth={2.4} />
                 </span>
               </Link>
             );

@@ -143,12 +143,15 @@ input[type='number'] {
 :root {
   --dock-h: 56px; /* dock container height */
   --dock-gap: 10px; /* float distance from the screen edges */
-  /* Distance from the dock to the bottom of the viewport. The safe-area inset
-     is absorbed rather than added to the gap — stacking them (inset + gap)
-     pushed the dock ~46px off the bottom on a notched iPhone and left it
-     looking detached. max() keeps a 10px float where there is no inset, and
-     clears the home indicator without a large void underneath where there is. */
-  --dock-bottom: max(var(--dock-gap), calc(env(safe-area-inset-bottom) - 14px));
+  /* Distance from the dock to the bottom of the viewport.
+     The safe-area inset is absorbed, not added — and crucially it is CLAMPED.
+     Embedded webviews (the artifact viewer, in-app browsers) report an inset
+     that includes their own bottom chrome, which can be 60px+; passing that
+     through rode the dock high enough to sit over page content. clamp() keeps
+     a small float where there is no inset, clears a real home indicator where
+     there is one, and can never open a large void underneath no matter how
+     large the reported inset is. */
+  --dock-bottom: clamp(8px, calc(env(safe-area-inset-bottom) - 12px), 16px);
 }
 
 /* Sit a fixed element directly above the dock. */
