@@ -133,6 +133,9 @@ export default function Profile() {
                       <span className="text-xs font-bold" style={{ color: lp.accent }}>{lp.emoji} {lp.name}</span>
                       {boosted && <span className="text-xs font-bold text-[#ea580c]">🚀 Boosted</span>}
                       <div className="ml-auto flex items-center gap-1.5">
+                        <button onClick={() => navigate(`/sell/${l.id}`)} className="press inline-flex items-center gap-1 rounded-full bg-ink/5 px-2.5 py-1 text-xs font-bold text-ink">
+                          <Pencil size={13} /> Edit
+                        </button>
                         {l.listingPlan !== 'gold' && (
                           <button onClick={() => setUpgradeFor(l)} className="press inline-flex items-center gap-1 rounded-full bg-accent-soft px-2.5 py-1 text-xs font-bold text-accent">
                             <ArrowUpRight size={13} /> Upgrade
@@ -167,7 +170,7 @@ export default function Profile() {
                     <p className="truncate font-semibold text-ink">{d.title || 'Untitled draft'}</p>
                     <p className="text-xs text-muted">Draft · tap to continue</p>
                   </div>
-                  <button onClick={() => navigate('/sell')} className="press grid h-9 w-9 place-items-center rounded-full bg-ink/5 text-ink">
+                  <button onClick={() => navigate(`/sell/${d.id}`)} aria-label="Continue draft" className="press grid h-9 w-9 place-items-center rounded-full bg-ink/5 text-ink">
                     <Pencil size={16} />
                   </button>
                   <button

@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, useParams, Link } from 'react-router-dom';
 import { motion, AnimatePresence, Reorder } from 'framer-motion';
 import {
   ChevronLeft, ChevronRight, ImagePlus, Sparkles, Wand2, X, Check, Camera, Crop,
@@ -21,6 +21,7 @@ import { TOWNS_BY_PROVINCE, locationOf } from '../data/locations.js';
 import { useStore } from '../lib/store.jsx';
 import { placeholderDataUri } from '../lib/media.js';
 import { readManyImages } from '../lib/imageFile.js';
+import { formFromListing } from '../lib/listingForm.js';
 import { VEHICLE_MAKES, VEHICLE_MAKE_NAMES } from '../data/filterSchema.js';
 import { suggestPrice, generateDescription } from '../lib/ai.js';
 import { kr } from '../lib/format.js';
@@ -36,14 +37,33 @@ const single = (v) => (Array.isArray(v) ? v[0] : v);
 
 export default function Sell() {
   const navigate = useNavigate();
-  const { dispatch } = useStore();
+  const { state, dispatch } = useStore();
   const { toast } = useToast();
+  const { editId } = useParams();
 
-  const [step, setStep] = useState(0);
+  // The same route hydrates two cases: editing a published listing the user
+  // owns (saving updates it in place) and resuming a saved draft (saving
+  // publishes it). Only the user's own listings/drafts can be opened.
+  const editing = useMemo(
+    () => (editId ? state.myListings.find((l) => l.id === editId) || null : null),
+    [editId, state.myListings]
+  );
+  const draft = useMemo(
+    () => (editId && !editing ? state.drafts.find((d) => d.id === editId) || null : null),
+    [editId, editing, state.drafts]
+  );
+  const source = editing || draft;
+  const isEdit = !!editing;
+
+  // Jump straight to Details when resuming — the seller already chose a
+  // category and plan; they can still step back to change either.
+  const [step, setStep] = useState(source ? 3 : 0);
   const [enhancing, setEnhancing] = useState(false);
   const [showTowns, setShowTowns] = useState(false);
-  const listingId = useRef(`l_new_${Date.now().toString(36)}`);
-  const [form, setForm] = useState({
+  // Only reuse the URL id when it resolves to a listing the user owns —
+  // otherwise /sell/anything would mint a new listing under that id.
+  const listingId = useRef(source ? source.id : `l_new_${Date.now().toString(36)}`);
+  const [form, setForm] = useState(() => (source ? formFromListing(source, CURRENT_USER.location.split(',')[0]) : {
     category: null,
     listingPlan: 'mahala',
     photos: [],
@@ -56,7 +76,7 @@ export default function Sell() {
     location: CURRENT_USER.location.split(',')[0],
     phone: '',
     delivery: ['Pickup'],
-  });
+  }));
 
   const set = (patch) => setForm((f) => ({ ...f, ...patch }));
   const setFv = (key, v) => setForm((f) => ({ ...f, fv: { ...f.fv, [key]: v } }));
@@ -148,9 +168,10 @@ export default function Sell() {
     };
   };
 
-  // Auto-save a draft as the user moves through steps.
+  // Auto-save a draft as the user moves through steps. Never while editing —
+  // a published listing must not spawn a parallel draft of itself.
   useEffect(() => {
-    if (form.category && (form.title || form.photos.length)) {
+    if (!isEdit && form.category && (form.title || form.photos.length)) {
       dispatch({ type: 'SAVE_DRAFT', listing: { ...buildListing(), draft: true } });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -174,6 +195,12 @@ export default function Sell() {
 
   const publish = () => {
     const listing = buildListing();
+    if (isEdit) {
+      dispatch({ type: 'UPDATE_LISTING', id: editing.id, patch: listing });
+      toast('Changes saved');
+      navigate(`/listing/${editing.id}`);
+      return;
+    }
     dispatch({ type: 'PUBLISH', listing });
     dispatch({ type: 'ADD_NOTIFICATION', notification: { type: 'system', title: 'Listing published', body: `${listing.title} is now live on Kaira` } });
     toast(plan.price ? `Published on ${plan.name} 🎉` : 'Published! Your listing is live 🎉');
@@ -190,11 +217,13 @@ export default function Sell() {
               <ChevronLeft size={20} />
             </button>
             <div className="flex-1">
-              <h1 className="text-lg font-bold text-ink">{cat ? `List your ${cat.label.toLowerCase()}` : 'List an item'}</h1>
+              <h1 className="truncate text-lg font-bold text-ink">
+                {isEdit ? 'Edit listing' : cat ? `List your ${cat.label.toLowerCase()}` : 'List an item'}
+              </h1>
               <p className="text-xs text-muted">Step {step + 1} of {STEPS.length} · {STEPS[step]}</p>
             </div>
-            <span className="inline-flex items-center gap-1 rounded-full bg-ink/5 px-2.5 py-1 text-xs font-semibold text-muted">
-              <Check size={13} className="text-accent" /> Draft saved
+            <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-ink/5 px-2.5 py-1 text-xs font-semibold text-muted">
+              {isEdit ? <><Pencil size={12} /> Editing</> : <><Check size={13} className="text-accent" /> Draft saved</>}
             </span>
           </div>
           <div className="mt-2.5 flex gap-1.5">
@@ -237,7 +266,7 @@ export default function Sell() {
                 openTowns={() => setShowTowns(true)} toast={toast} recordCustom={recordCustom}
               />
             )}
-            {step === 4 && <ReviewStep form={form} schema={schema} plan={plan} cat={cat} brand={brand} condition={condition} goTo={setStep} />}
+            {step === 4 && <ReviewStep form={form} schema={schema} plan={plan} cat={cat} brand={brand} condition={condition} goTo={setStep} isEdit={isEdit} />}
           </motion.div>
         </div>
       </Container>
@@ -264,7 +293,11 @@ export default function Sell() {
                 <Button full size="lg" onClick={next} disabled={!canReview}>Review listing <ChevronRight size={18} /></Button>
               </div>
             )}
-            {step === 4 && <Button full size="lg" onClick={publish}><Tag size={18} /> Publish Listing</Button>}
+            {step === 4 && (
+              <Button full size="lg" onClick={publish}>
+                {isEdit ? <><Check size={18} /> Save changes</> : <><Tag size={18} /> Publish Listing</>}
+              </Button>
+            )}
           </div>
         </div>
       )}
@@ -627,7 +660,7 @@ function DetailsStep({ form, set, setFv, schema, cat, isJob, brand, condition, o
 /* ------------------------------------------------------------------ */
 /* Step 5 — Review                                                     */
 /* ------------------------------------------------------------------ */
-function ReviewStep({ form, schema, plan, cat, brand, condition, goTo }) {
+function ReviewStep({ form, schema, plan, cat, brand, condition, goTo, isEdit }) {
   const cover = form.photos[0]?.src || placeholderDataUri({ category: form.category, attrs: {}, title: form.title });
   const specs = useMemo(() => {
     return visibleFields(schema, form.fv)
@@ -648,7 +681,7 @@ function ReviewStep({ form, schema, plan, cat, brand, condition, goTo }) {
 
   return (
     <div>
-      <div className="mb-3 flex items-center gap-2"><Eye size={18} className="text-accent" /><h2 className="text-xl font-extrabold text-ink">Review &amp; publish</h2></div>
+      <div className="mb-3 flex items-center gap-2"><Eye size={18} className="text-accent" /><h2 className="text-xl font-extrabold text-ink">{isEdit ? 'Review changes' : 'Review & publish'}</h2></div>
       <p className="mb-4 text-sm text-muted">Exactly how buyers will see your {cat?.label.toLowerCase()} listing.</p>
 
       <div className="overflow-hidden rounded-3xl border border-hairline bg-surface">

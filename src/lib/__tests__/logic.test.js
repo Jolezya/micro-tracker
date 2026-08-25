@@ -12,6 +12,7 @@ import { kwacha, kwachaCompact, timeAgo, distanceKm, formatDistance, compactNumb
 import { placeholderDataUri, resolveKind, coverPhoto, realPhotos, badgesFor } from '../media.js';
 import { TOWNS_FULL, TOWN_NAMES, findTown, townCoords, locationOf, PROVINCES } from '../../data/locations.js';
 import { listingSchema, visibleFields, missingRequired, photoRule } from '../../data/listingSchema.js';
+import { fvFromListing, formFromListing } from '../listingForm.js';
 
 const NOW = Date.parse('2026-08-05T09:00:00Z');
 const L = (over = {}) => ({
@@ -488,6 +489,77 @@ describe('listing schema engine', () => {
       { brand: 'Toyota', condition: 'Good' }
     );
     expect(done).toEqual([]);
+  });
+});
+
+// ============================================================
+// Listing editing — hydrating the dynamic form back from a listing
+// ============================================================
+describe('listing edit hydration', () => {
+  it('restores vehicle fields from top-level keys and attrs', () => {
+    const schema = listingSchema('vehicles');
+    const fv = fvFromListing(schema, {
+      category: 'vehicles',
+      brand: 'Toyota',
+      condition: 'Good',
+      attrs: { vehicleType: 'Car', model: 'Corolla', year: 2019, mileage: 84000, fuel: 'Petrol', transmission: 'Automatic' },
+    });
+    expect(fv.make).toBe('Toyota');            // select → string
+    expect(fv.condition).toEqual(['Good']);    // chips → array
+    expect(fv.vehicleType).toEqual(['Car']);
+    expect(fv.year).toBe('2019');              // number → string for the input
+    expect(fv.mileage).toBe('84000');
+    expect(fv.model).toBe('Corolla');
+  });
+
+  it('restores a required subcategory-routed field (electronics)', () => {
+    const schema = listingSchema('electronics');
+    const fv = fvFromListing(schema, { subcategory: 'Phones', brand: 'Apple', condition: 'Like new', attrs: { storage: '256GB', warranty: true } });
+    expect(fv.type).toEqual(['Phones']);
+    expect(fv.brand).toBe('Apple');
+    expect(fv.storage).toEqual(['256GB']);
+    expect(fv.warranty).toBe(true);            // toggle → boolean
+    // and the restored values satisfy validation, so an edit can be saved
+    expect(missingRequired(schema, fv, { brand: 'Apple', condition: 'Like new', subcategory: 'Phones' })).toEqual([]);
+  });
+
+  it('restores multi-select chips as arrays and skips empty values', () => {
+    const schema = listingSchema('property');
+    const fv = fvFromListing(schema, { attrs: { propertyType: 'House', amenities: ['Parking', 'Garden'], bedrooms: 3, status: '' } });
+    expect(fv.amenities).toEqual(['Parking', 'Garden']);
+    expect(fv.propertyType).toEqual(['House']);
+    expect(fv.bedrooms).toBe('3');
+    expect(fv).not.toHaveProperty('status');   // empty values are not restored
+  });
+
+  it('builds a complete editable form, including photos and job salary', () => {
+    const form = formFromListing({
+      id: 'l9', category: 'jobs', title: 'Financial Analyst', description: 'Role',
+      listingPlan: 'gold', photos: ['a.png', 'b.png'], price: 0, negotiable: false,
+      location: { city: 'Kitwe' }, contactPhone: '+260 1', delivery: ['Pickup'],
+      attrs: { salary: 25000, jobType: 'Full-time' },
+    }, 'Lusaka');
+    expect(form.title).toBe('Financial Analyst');
+    expect(form.listingPlan).toBe('gold');
+    expect(form.photos).toHaveLength(2);
+    expect(form.photos[0].src).toBe('a.png');
+    expect(form.price).toBe('25000');          // jobs keep the figure in attrs.salary
+    expect(form.location).toBe('Kitwe');
+    expect(form.fv.jobType).toEqual(['Full-time']);
+  });
+
+  it('round-trips "price on request" but not category-derived price labels', () => {
+    expect(formFromListing({ category: 'vehicles', priceLabel: 'Price on request' }).onRequest).toBe(true);
+    expect(formFromListing({ category: 'services', priceLabel: 'Quote on request' }).onRequest).toBe(false);
+    expect(formFromListing({ category: 'jobs', priceLabel: 'Competitive' }).onRequest).toBe(false);
+  });
+
+  it('falls back safely for a missing or unknown listing', () => {
+    const form = formFromListing(undefined, 'Lusaka');
+    expect(form.category).toBeNull();
+    expect(form.photos).toEqual([]);
+    expect(form.location).toBe('Lusaka');
+    expect(form.delivery).toEqual(['Pickup']);
   });
 });
 

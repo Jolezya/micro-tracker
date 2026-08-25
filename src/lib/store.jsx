@@ -206,6 +206,21 @@ function reducer(state, action) {
         drafts: state.drafts.filter((d) => d.id !== action.listing.id),
       };
     }
+    // Edit an existing listing in place. Identity and history are preserved —
+    // id, seller, original postedAt, views and saves must survive an edit, so
+    // only the seller-editable fields from the rebuilt listing are merged in.
+    case 'UPDATE_LISTING': {
+      const { id, patch } = action;
+      const idx = state.myListings.findIndex((l) => l.id === id);
+      if (idx === -1) return state;
+      const prev = state.myListings[idx];
+      const { sellerId, postedAt, views, saves, mine, boostedUntil, ...editable } = patch;
+      const next = { ...prev, ...editable, id: prev.id, editedAt: new Date().toISOString() };
+      const myListings = [...state.myListings];
+      myListings[idx] = next;
+      return { ...state, myListings };
+    }
+
     case 'DELETE_LISTING':
       return { ...state, myListings: state.myListings.filter((l) => l.id !== action.id) };
 

@@ -41,6 +41,7 @@ export default function App() {
           <Route path="messages" element={<Messages />} />
           <Route path="messages/:convId" element={<Chat />} />
           <Route path="sell" element={<Sell />} />
+          <Route path="sell/:editId" element={<Sell />} />
           <Route path="profile" element={<Profile />} />
           <Route path="saved" element={<Saved />} />
           <Route path="notifications" element={<Notifications />} />

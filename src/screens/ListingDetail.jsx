@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import {
   ChevronLeft, Heart, Share2, Flag, MapPin, MessageCircle, Phone, ShieldCheck,
-  Clock, Eye, Tag, ChevronRight, Sparkles, BadgeCheck,
+  Clock, Eye, Tag, ChevronRight, Sparkles, BadgeCheck, Pencil,
 } from 'lucide-react';
 import { Gallery } from '../components/Gallery.jsx';
 import { MapView } from '../components/MapView.jsx';
@@ -139,7 +139,13 @@ export default function ListingDetail() {
 
         {/* Owner panel — upgrade / boost your own live listing */}
         {mine && (
-          <div className="mt-4">
+          <div className="mt-4 space-y-3">
+            <Link
+              to={`/sell/${listing.id}`}
+              className="press flex items-center justify-center gap-2 rounded-2xl border border-hairline bg-surface py-3 text-sm font-bold text-ink"
+            >
+              <Pencil size={16} /> Edit listing
+            </Link>
             <LivePlanPanel listing={listing} />
           </div>
         )}
