@@ -208,7 +208,7 @@ export default function Sell() {
   };
 
   return (
-    <div className="pb-dock-cta lg:pb-8">
+    <div className="pb-cta lg:pb-8">
       {/* Header + progress */}
       <div className="glass sticky top-0 z-30 safe-top">
         <Container className="py-2.5">

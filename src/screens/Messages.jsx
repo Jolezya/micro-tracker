@@ -19,7 +19,7 @@ export default function Messages() {
   });
 
   return (
-    <div className="pb-8">
+    <div className="lg:pb-8">
       <ScreenHeader title="Messages" />
       <Container className="pt-2">
         {convs.length === 0 ? (

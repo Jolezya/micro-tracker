@@ -20,7 +20,7 @@ export default function Saved() {
   );
 
   return (
-    <div className="pb-8">
+    <div className="lg:pb-8">
       <ScreenHeader title="Saved" back />
       <Container className="pt-2">
         <Segmented

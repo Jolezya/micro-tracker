@@ -35,7 +35,7 @@ export default function Profile() {
   const totalViews = myListings.reduce((a, l) => a + (l.views || 0), 0);
 
   return (
-    <div className="pb-8">
+    <div className="lg:pb-8">
       <ScreenHeader
         title="Profile"
         right={

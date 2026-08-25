@@ -281,7 +281,7 @@ export default function Home() {
         </section>
 
         {/* Latest — full grid */}
-        <section className="mt-8 pb-8">
+        <section className="mt-8 lg:pb-8">
           <SectionHeader title="Fresh finds" action="Browse all" onAction={() => navigate('/search')} />
           <div className="grid grid-cols-2 gap-x-3 gap-y-6 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
             {latest.map((l, i) => (

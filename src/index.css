@@ -141,21 +141,30 @@ input[type='number'] {
    One source of truth: the dock's own size/offset plus the helpers screens use
    to keep their content and fixed footers clear of it. */
 :root {
-  --dock-h: 62px; /* dock container height */
-  --dock-gap: 12px; /* float distance from the screen edges */
+  --dock-h: 56px; /* dock container height */
+  --dock-gap: 10px; /* float distance from the screen edges */
+  /* Distance from the dock to the bottom of the viewport. The safe-area inset
+     is absorbed rather than added to the gap — stacking them (inset + gap)
+     pushed the dock ~46px off the bottom on a notched iPhone and left it
+     looking detached. max() keeps a 10px float where there is no inset, and
+     clears the home indicator without a large void underneath where there is. */
+  --dock-bottom: max(var(--dock-gap), calc(env(safe-area-inset-bottom) - 14px));
 }
 
 /* Sit a fixed element directly above the dock. */
 .dock-above {
-  bottom: calc(env(safe-area-inset-bottom) + var(--dock-gap) + var(--dock-h) + 10px);
+  bottom: calc(var(--dock-bottom) + var(--dock-h) + 8px);
 }
-/* Reserve room so page content is never hidden behind the dock. */
+/* Just enough room that the last content clears the dock at full scroll —
+   content still passes behind the translucent dock on the way there. */
 .pb-dock {
-  padding-bottom: calc(env(safe-area-inset-bottom) + var(--dock-gap) + var(--dock-h) + 18px);
+  padding-bottom: calc(var(--dock-bottom) + var(--dock-h) + 10px);
 }
-/* Screens that stack their own fixed CTA bar above the dock need more room. */
-.pb-dock-cta {
-  padding-bottom: calc(env(safe-area-inset-bottom) + var(--dock-gap) + var(--dock-h) + 106px);
+/* Extra room for a screen that stacks its own fixed CTA bar above the dock.
+   Stacks with the shell's .pb-dock rather than repeating it — the shell owns
+   dock clearance, a screen only adds what its own bar needs. */
+.pb-cta {
+  padding-bottom: 84px;
 }
 
 /* ---- Safe area helpers ---- */

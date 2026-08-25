@@ -76,7 +76,7 @@ export default function ListingDetail() {
   };
 
   return (
-    <div className="pb-dock-cta lg:pb-8">
+    <div className="pb-cta lg:pb-8">
       {/* Floating top controls over gallery */}
       <div className="relative">
         <div className="pointer-events-none absolute inset-x-0 top-0 z-20 flex items-center justify-between p-3 safe-top">

@@ -28,7 +28,7 @@ export default function Notifications() {
   };
 
   return (
-    <div className="pb-8">
+    <div className="lg:pb-8">
       <ScreenHeader
         title="Notifications"
         back

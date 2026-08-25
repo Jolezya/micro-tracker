@@ -53,7 +53,7 @@ export default function SellerProfile() {
   };
 
   return (
-    <div className="pb-8">
+    <div className="lg:pb-8">
       <ScreenHeader title={seller.name} back />
 
       {/* Cover */}

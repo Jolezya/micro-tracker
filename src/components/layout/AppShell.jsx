@@ -49,10 +49,10 @@ function BottomNav() {
     // tappable either side of the dock; only the dock itself is interactive.
     <nav
       className="pointer-events-none fixed inset-x-0 bottom-0 z-40 px-3 lg:hidden"
-      style={{ paddingBottom: 'calc(env(safe-area-inset-bottom) + var(--dock-gap))' }}
+      style={{ paddingBottom: 'var(--dock-bottom)' }}
     >
       <div
-        className={`dock-surface pointer-events-auto mx-auto flex max-w-md items-center justify-around rounded-[26px] px-1.5 ${compact ? 'is-compact' : ''}`}
+        className={`dock-surface pointer-events-auto mx-auto flex max-w-md items-center justify-around rounded-[24px] px-1.5 ${compact ? 'is-compact' : ''}`}
         style={{ height: 'var(--dock-h)' }}
       >
         {NAV.map((item) => {
@@ -69,14 +69,14 @@ function BottomNav() {
                     brand-tinted shadow and a 1px top highlight for depth —
                     no gloss, no heavy gradient. */}
                 <span
-                  className="grid h-12 w-12 -translate-y-3.5 place-items-center rounded-[18px] text-accent-ink"
+                  className="grid h-11 w-11 -translate-y-3 place-items-center rounded-[16px] text-accent-ink"
                   style={{
                     background: 'rgb(var(--accent))',
                     boxShadow:
-                      '0 8px 18px -6px rgb(var(--accent) / 0.5), 0 2px 5px -2px rgb(var(--shadow-color) / 0.25), inset 0 1px 0 rgb(255 255 255 / 0.2)',
+                      '0 7px 16px -6px rgb(var(--accent) / 0.48), 0 2px 4px -2px rgb(var(--shadow-color) / 0.24), inset 0 1px 0 rgb(255 255 255 / 0.2)',
                   }}
                 >
-                  <Icon size={24} strokeWidth={2.4} />
+                  <Icon size={22} strokeWidth={2.4} />
                 </span>
               </Link>
             );

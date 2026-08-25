@@ -66,7 +66,7 @@ export default function Admin() {
   };
 
   return (
-    <div className="pb-8">
+    <div className="lg:pb-8">
       <div className="glass sticky top-0 z-30 safe-top">
         <Container className="flex items-center gap-3 py-2.5" size="max-w-6xl">
           <button onClick={() => navigate(-1)} className="press -ml-1 grid h-9 w-9 place-items-center rounded-full bg-ink/5 text-ink">
