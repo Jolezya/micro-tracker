@@ -137,6 +137,27 @@ input[type='number'] {
   border-radius: 999px;
 }
 
+/* ---- Floating nav dock geometry ----
+   One source of truth: the dock's own size/offset plus the helpers screens use
+   to keep their content and fixed footers clear of it. */
+:root {
+  --dock-h: 62px; /* dock container height */
+  --dock-gap: 12px; /* float distance from the screen edges */
+}
+
+/* Sit a fixed element directly above the dock. */
+.dock-above {
+  bottom: calc(env(safe-area-inset-bottom) + var(--dock-gap) + var(--dock-h) + 10px);
+}
+/* Reserve room so page content is never hidden behind the dock. */
+.pb-dock {
+  padding-bottom: calc(env(safe-area-inset-bottom) + var(--dock-gap) + var(--dock-h) + 18px);
+}
+/* Screens that stack their own fixed CTA bar above the dock need more room. */
+.pb-dock-cta {
+  padding-bottom: calc(env(safe-area-inset-bottom) + var(--dock-gap) + var(--dock-h) + 106px);
+}
+
 /* ---- Safe area helpers ---- */
 .safe-top {
   padding-top: env(safe-area-inset-top);
@@ -157,6 +178,34 @@ input[type='number'] {
     -webkit-backdrop-filter: saturate(180%) blur(20px);
     backdrop-filter: saturate(180%) blur(20px);
     border: 1px solid rgb(var(--line) / var(--line-alpha));
+  }
+
+  /* Floating navigation dock: a restrained translucent surface that reads as
+     lifted off the page. Deliberately lighter than .glass — one soft shadow
+     for depth, a hairline edge, no gloss or gradient. */
+  .dock-surface {
+    background-color: rgb(var(--surface) / 0.88);
+    -webkit-backdrop-filter: saturate(150%) blur(14px);
+    backdrop-filter: saturate(150%) blur(14px);
+    border: 1px solid rgb(var(--line) / var(--line-alpha));
+    box-shadow:
+      0 10px 26px -10px rgb(var(--shadow-color) / 0.3),
+      0 2px 8px -4px rgb(var(--shadow-color) / 0.16);
+    transition: background-color 0.28s ease, box-shadow 0.28s ease, transform 0.28s ease;
+  }
+  /* While the page is scrolling the dock recedes a little, then settles back. */
+  .dock-surface.is-compact {
+    background-color: rgb(var(--surface) / 0.7);
+    box-shadow: 0 6px 16px -8px rgb(var(--shadow-color) / 0.2);
+    transform: scale(0.985);
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .dock-surface {
+      transition: none;
+    }
+    .dock-surface.is-compact {
+      transform: none;
+    }
   }
 
   .card {

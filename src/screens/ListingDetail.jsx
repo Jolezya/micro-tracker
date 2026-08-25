@@ -76,7 +76,7 @@ export default function ListingDetail() {
   };
 
   return (
-    <div className="pb-28 lg:pb-8">
+    <div className="pb-dock-cta lg:pb-8">
       {/* Floating top controls over gallery */}
       <div className="relative">
         <div className="pointer-events-none absolute inset-x-0 top-0 z-20 flex items-center justify-between p-3 safe-top">
@@ -268,7 +268,7 @@ export default function ListingDetail() {
 
       {/* Sticky action bar — hidden on your own listing */}
       {!mine && (
-        <div className="fixed inset-x-0 bottom-[68px] z-40 lg:bottom-0">
+        <div className="dock-above fixed inset-x-0 z-40 px-3 lg:bottom-0 lg:px-0">
           <div className="glass mx-auto flex max-w-3xl items-center gap-3 border-t px-4 py-3 pb-safe">
             <Button variant="outline" size="lg" onClick={() => toast(`Calling ${seller.name.split(' ')[0]}…`, { type: 'info' })} className="flex-1">
               <Phone size={18} /> Call

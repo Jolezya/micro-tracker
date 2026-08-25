@@ -208,7 +208,7 @@ export default function Sell() {
   };
 
   return (
-    <div className="pb-28 lg:pb-8">
+    <div className="pb-dock-cta lg:pb-8">
       {/* Header + progress */}
       <div className="glass sticky top-0 z-30 safe-top">
         <Container className="py-2.5">
@@ -273,7 +273,7 @@ export default function Sell() {
 
       {/* Footer CTA */}
       {step > 0 && (
-        <div className="fixed inset-x-0 bottom-[68px] z-40 lg:bottom-0">
+        <div className="dock-above fixed inset-x-0 z-40 px-3 lg:bottom-0 lg:px-0">
           <div className="glass mx-auto flex max-w-3xl items-center gap-3 border-t px-4 py-3 pb-safe">
             {step === 1 && <Button full size="lg" onClick={next}>Continue with {plan.name} <ChevronRight size={18} /></Button>}
             {step === 2 && (() => {

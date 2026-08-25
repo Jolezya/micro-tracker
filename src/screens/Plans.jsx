@@ -24,7 +24,7 @@ export default function Plans() {
   const [cat, setCat] = useState(null);
 
   return (
-    <div className="pb-24 lg:pb-10">
+    <div className="pb-dock lg:pb-10">
       <div className="glass sticky top-0 z-30 safe-top">
         <Container className="flex items-center gap-3 py-2.5">
           <button onClick={() => navigate(-1)} className="press -ml-1 grid h-9 w-9 place-items-center rounded-full bg-ink/5 text-ink">

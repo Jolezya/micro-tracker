@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { NavLink, Outlet, useLocation, Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Home, Search, Plus, MessageCircle, User, Bell, Sparkles } from 'lucide-react';
@@ -20,12 +20,41 @@ function useBadges() {
   return { messages, notifications };
 }
 
-// ---------------- Mobile bottom nav ----------------
+// While the page is scrolling the dock recedes slightly, then settles back
+// shortly after scrolling stops.
+function useScrollSettle(delay = 550) {
+  const [scrolling, setScrolling] = useState(false);
+  useEffect(() => {
+    let timer;
+    const onScroll = () => {
+      setScrolling(true);
+      clearTimeout(timer);
+      timer = setTimeout(() => setScrolling(false), delay);
+    };
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => {
+      window.removeEventListener('scroll', onScroll);
+      clearTimeout(timer);
+    };
+  }, [delay]);
+  return scrolling;
+}
+
+// ---------------- Mobile floating nav dock ----------------
 function BottomNav() {
   const badges = useBadges();
+  const compact = useScrollSettle();
   return (
-    <nav className="glass fixed inset-x-0 bottom-0 z-40 border-t lg:hidden">
-      <div className="mx-auto flex max-w-lg items-stretch justify-around px-2 pb-safe pt-1.5">
+    // The <nav> spans the width but ignores pointer events, so the page stays
+    // tappable either side of the dock; only the dock itself is interactive.
+    <nav
+      className="pointer-events-none fixed inset-x-0 bottom-0 z-40 px-3 lg:hidden"
+      style={{ paddingBottom: 'calc(env(safe-area-inset-bottom) + var(--dock-gap))' }}
+    >
+      <div
+        className={`dock-surface pointer-events-auto mx-auto flex max-w-md items-center justify-around rounded-[26px] px-1.5 ${compact ? 'is-compact' : ''}`}
+        style={{ height: 'var(--dock-h)' }}
+      >
         {NAV.map((item) => {
           const Icon = item.icon;
           if (item.primary) {
@@ -34,10 +63,20 @@ function BottomNav() {
                 key={item.to}
                 to={item.to}
                 aria-label="Sell"
-                className="press relative -mt-5 flex flex-col items-center"
+                className="press relative flex flex-1 justify-center"
               >
-                <span className="grid h-14 w-14 place-items-center rounded-2xl btn-accent shadow-glow">
-                  <Icon size={26} strokeWidth={2.4} />
+                {/* Primary CTA: lifted just above the dock, with a single soft
+                    brand-tinted shadow and a 1px top highlight for depth —
+                    no gloss, no heavy gradient. */}
+                <span
+                  className="grid h-12 w-12 -translate-y-3.5 place-items-center rounded-[18px] text-accent-ink"
+                  style={{
+                    background: 'rgb(var(--accent))',
+                    boxShadow:
+                      '0 8px 18px -6px rgb(var(--accent) / 0.5), 0 2px 5px -2px rgb(var(--shadow-color) / 0.25), inset 0 1px 0 rgb(255 255 255 / 0.2)',
+                  }}
+                >
+                  <Icon size={24} strokeWidth={2.4} />
                 </span>
               </Link>
             );
@@ -48,13 +87,13 @@ function BottomNav() {
               key={item.to}
               to={item.to}
               end={item.end}
-              className="press relative flex flex-1 flex-col items-center gap-0.5 py-1.5"
+              className="press relative flex flex-1 flex-col items-center gap-0.5"
             >
               {({ isActive }) => (
                 <>
                   <span className="relative">
                     <Icon
-                      size={23}
+                      size={22}
                       strokeWidth={isActive ? 2.5 : 2}
                       className={isActive ? 'text-accent' : 'text-faint'}
                     />
@@ -147,7 +186,7 @@ export function AppShell() {
   return (
     <div className="mx-auto flex min-h-[100dvh] w-full max-w-[1400px]">
       <SideNav />
-      <main className="min-w-0 flex-1 pb-24 lg:pb-0">
+      <main className="pb-dock min-w-0 flex-1 lg:pb-0">
         <motion.div
           key={location.pathname.split('/')[1] || 'home'}
           initial={{ opacity: 0, y: 8 }}
