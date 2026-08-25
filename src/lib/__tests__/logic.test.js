@@ -13,6 +13,10 @@ import { placeholderDataUri, resolveKind, coverPhoto, realPhotos, badgesFor } fr
 import { TOWNS_FULL, TOWN_NAMES, findTown, townCoords, locationOf, PROVINCES } from '../../data/locations.js';
 import { listingSchema, visibleFields, missingRequired, photoRule } from '../../data/listingSchema.js';
 import { fvFromListing, formFromListing } from '../listingForm.js';
+import {
+  validateEmail, validatePassword, passwordStrength, normalisePhone, validatePhone,
+  signUp, signIn, makeAccount, makeOtp, checkOtp, gateReason,
+} from '../auth.js';
 
 const NOW = Date.parse('2026-08-05T09:00:00Z');
 const L = (over = {}) => ({
@@ -607,5 +611,84 @@ describe('photo requirement framework', () => {
   it('defaults unknown/catch-all categories to recommended (encouraged, never blocked)', () => {
     expect(photoRule(listingSchema('everything')).level).toBe('recommended');
     expect(photoRule(listingSchema('does-not-exist')).level).toBe('recommended');
+  });
+});
+
+// ============================================================
+// Accounts, gating and verification
+// ============================================================
+describe('auth rules', () => {
+  it('validates emails without bouncing unusual but valid addresses', () => {
+    expect(validateEmail('')).toMatch(/enter/i);
+    expect(validateEmail('chanda')).toBeTruthy();
+    expect(validateEmail('chanda@kaira')).toBeTruthy();       // no dot in domain
+    expect(validateEmail('a b@kaira.zm')).toBeTruthy();       // space
+    expect(validateEmail('chanda@kaira.zm')).toBeNull();
+    expect(validateEmail('c.mwale+sell@mail.co.zm')).toBeNull();
+  });
+
+  it('rejects weak passwords by length and predictability, not symbol rules', () => {
+    expect(validatePassword('short1')).toMatch(/8 characters/);
+    expect(validatePassword('12345678')).toBeTruthy();        // digits only
+    expect(validatePassword('password1')).toBeTruthy();       // common
+    expect(validatePassword('lusaka2024')).toBeNull();
+    expect(passwordStrength('lusaka2024').score).toBeGreaterThan(0);
+    expect(passwordStrength('Lusaka!Market24').score).toBe(3);
+  });
+
+  it('normalises the Zambian phone formats people actually type', () => {
+    for (const input of ['0977123456', '260977123456', '+260 977 123 456', '+260-977-123456']) {
+      expect(normalisePhone(input)).toBe('+260977123456');
+    }
+    expect(normalisePhone('0961234567')).toBe('+260961234567'); // Airtel
+    expect(normalisePhone('0951234567')).toBe('+260951234567'); // Zamtel
+    expect(normalisePhone('0211234567')).toBeNull();            // landline
+    expect(normalisePhone('097712345')).toBeNull();             // too short
+    expect(validatePhone('0977123456')).toBeNull();
+    expect(validatePhone('12345')).toBeTruthy();
+  });
+
+  it('creates an account without storing the password in the clear', () => {
+    const { user } = signUp([], { name: 'Chanda Mwale', email: 'Chanda@Kaira.ZM', password: 'lusaka2024', town: 'Lusaka' });
+    expect(user.email).toBe('chanda@kaira.zm');   // normalised
+    expect(user.handle).toBe('chandamwale');
+    expect(user.passwordHash).not.toContain('lusaka2024');
+    expect(user.phoneVerified).toBe(false);       // phone deferred to first listing
+    expect(user.verified).toEqual([]);
+  });
+
+  it('refuses duplicate emails and surfaces the offending field', () => {
+    const { user } = signUp([], { name: 'Chanda', email: 'c@kaira.zm', password: 'lusaka2024' });
+    const dup = signUp([user], { name: 'Someone', email: 'C@KAIRA.ZM', password: 'lusaka2024' });
+    expect(dup.error).toMatch(/already exists/i);
+    expect(dup.field).toBe('email');
+  });
+
+  it('signs in only with the right password and never reveals which emails exist', () => {
+    const { user } = signUp([], { name: 'Chanda', email: 'c@kaira.zm', password: 'lusaka2024' });
+    expect(signIn([user], { email: 'c@kaira.zm', password: 'lusaka2024' }).user).toBeTruthy();
+    const wrongPw = signIn([user], { email: 'c@kaira.zm', password: 'nope12345' });
+    const noSuchUser = signIn([user], { email: 'ghost@kaira.zm', password: 'nope12345' });
+    expect(wrongPw.error).toBe(noSuchUser.error); // identical — no account enumeration
+  });
+
+  it('points provider accounts back at their provider instead of failing silently', () => {
+    const g = makeAccount({ name: 'Chanda', email: 'c@kaira.zm', provider: 'google' });
+    expect(signIn([g], { email: 'c@kaira.zm', password: 'anything1' }).error).toMatch(/Google/);
+  });
+
+  it('checks the OTP that was actually issued', () => {
+    const code = makeOtp();
+    expect(code).toMatch(/^\d{6}$/);
+    expect(checkOtp(code, code)).toBeNull();
+    expect(checkOtp(code, '000')).toMatch(/6-digit/);
+    expect(checkOtp('123456', '654321')).toMatch(/incorrect/i);
+  });
+
+  it('explains why an account is needed for each gated action', () => {
+    expect(gateReason('save')).toMatch(/save/i);
+    expect(gateReason('message')).toMatch(/message/i);
+    expect(gateReason('sell')).toMatch(/list/i);
+    expect(gateReason('unknown')).toMatch(/continue/i);
   });
 });

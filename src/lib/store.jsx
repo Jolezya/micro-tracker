@@ -100,6 +100,8 @@ function seedNotifications() {
 const initialState = {
   theme: initialTheme(),
   auth: { status: 'guest', user: null },
+  // Registered accounts (local-only demo store). Passwords are kept as hashes.
+  accounts: [],
   plan: 'free',
   saved: [],
   recent: [],
@@ -142,6 +144,49 @@ function reducer(state, action) {
         auth: { status: 'authed', user: action.user ?? CURRENT_USER },
         onboarded: true,
       };
+
+    // Registers a new account and signs it in. The caller has already run the
+    // rules in lib/auth.js, so the reducer only stores the result.
+    case 'SIGN_UP': {
+      const user = action.user;
+      if (!user) return state;
+      return {
+        ...state,
+        accounts: [...state.accounts, user],
+        auth: { status: 'authed', user },
+        onboarded: true,
+      };
+    }
+
+    // Profile edits after signup (name / town / photo) must reach the stored
+    // account too, not just the session, or they vanish on next sign-in.
+    case 'UPDATE_PROFILE': {
+      if (state.auth.status !== 'authed') return state;
+      const user = { ...state.auth.user, ...action.patch };
+      return {
+        ...state,
+        auth: { ...state.auth, user },
+        accounts: state.accounts.map((a) => (a.id === user.id ? { ...a, ...action.patch } : a)),
+      };
+    }
+
+    // The one paid step: a verified Zambian number, taken at first listing
+    // rather than at signup so SMS is only spent on people who actually sell.
+    case 'VERIFY_PHONE': {
+      if (state.auth.status !== 'authed') return state;
+      const patch = {
+        phone: action.phone,
+        phoneVerified: true,
+        verified: [...new Set([...(state.auth.user.verified || []), 'phone'])],
+      };
+      const user = { ...state.auth.user, ...patch };
+      return {
+        ...state,
+        auth: { ...state.auth, user },
+        accounts: state.accounts.map((a) => (a.id === user.id ? { ...a, ...patch } : a)),
+      };
+    }
+
     case 'SIGN_OUT':
       return { ...state, auth: { status: 'guest', user: null } };
 

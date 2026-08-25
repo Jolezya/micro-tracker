@@ -19,6 +19,8 @@ import { OptionChips } from '../components/filters/OptionChips.jsx';
 import { ListingField, sanitizeNumber, clampToField } from '../components/listing/ListingField.jsx';
 import { TOWNS_BY_PROVINCE, locationOf } from '../data/locations.js';
 import { useStore } from '../lib/store.jsx';
+import { useAuthGate } from '../lib/useAuthGate.jsx';
+import { PhoneVerifySheet } from '../components/auth/PhoneVerifySheet.jsx';
 import { placeholderDataUri } from '../lib/media.js';
 import { readManyImages } from '../lib/imageFile.js';
 import { formFromListing } from '../lib/listingForm.js';
@@ -40,6 +42,8 @@ export default function Sell() {
   const { state, dispatch } = useStore();
   const { toast } = useToast();
   const { editId } = useParams();
+  const requireAuth = useAuthGate();
+  const [verifyPhone, setVerifyPhone] = useState(false);
 
   // The same route hydrates two cases: editing a published listing the user
   // owns (saving updates it in place) and resuming a saved draft (saving
@@ -99,6 +103,9 @@ export default function Sell() {
   }, [schema, form.fv]);
 
   const recordCustom = (field, v) => dispatch({ type: 'RECORD_CUSTOM', field, value: v });
+
+  // Listing requires an account; guests are sent to sign up and returned here.
+  useEffect(() => { requireAuth('sell'); }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const buildListing = () => {
     const attrs = {};
@@ -194,6 +201,13 @@ export default function Sell() {
   const back = () => (step === 0 ? navigate(-1) : setStep(step - 1));
 
   const publish = () => {
+    // Verifying a phone costs an SMS, so it is asked for once — at the first
+    // publish by an unverified seller. Edits never re-trigger it.
+    if (!isEdit && !state.auth.user?.phoneVerified) { setVerifyPhone(true); return; }
+    doPublish();
+  };
+
+  const doPublish = () => {
     const listing = buildListing();
     if (isEdit) {
       dispatch({ type: 'UPDATE_LISTING', id: editing.id, patch: listing });
@@ -303,6 +317,7 @@ export default function Sell() {
       )}
 
       <TownPicker open={showTowns} onClose={() => setShowTowns(false)} value={form.location} onSelect={(name) => { set({ location: name }); setShowTowns(false); }} />
+      <PhoneVerifySheet open={verifyPhone} onClose={() => setVerifyPhone(false)} onVerified={doPublish} />
     </div>
   );
 }

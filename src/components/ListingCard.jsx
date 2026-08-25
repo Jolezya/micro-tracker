@@ -8,9 +8,11 @@ import { formatPrice, timeAgo } from '../lib/format.js';
 import { badgesFor, BADGE_STYLE, BADGE_BG } from '../lib/media.js';
 import { getUser } from '../data/users.js';
 import { useStore } from '../lib/store.jsx';
+import { useAuthGate } from '../lib/useAuthGate.jsx';
 
 function SaveButton({ id, className = '' }) {
   const { state, dispatch } = useStore();
+  const requireAuth = useAuthGate();
   const saved = state.saved.includes(id);
   return (
     <button
@@ -18,7 +20,7 @@ function SaveButton({ id, className = '' }) {
       onClick={(e) => {
         e.preventDefault();
         e.stopPropagation();
-        dispatch({ type: 'TOGGLE_SAVE', id });
+        requireAuth('save', () => dispatch({ type: 'TOGGLE_SAVE', id }));
       }}
       className={`press grid place-items-center rounded-full transition ${className}`}
     >

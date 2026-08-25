@@ -13,6 +13,7 @@ import { Button, Badge, Avatar, Stars, PlanBadge, VerifiedBadge, EmptyState } fr
 import { Sheet } from '../components/ui/Sheet.jsx';
 import { useToast } from '../components/ui/Toast.jsx';
 import { useAllListings, useStore } from '../lib/store.jsx';
+import { useAuthGate } from '../lib/useAuthGate.jsx';
 import { getUser } from '../data/users.js';
 import { CATEGORY_MAP } from '../data/categories.js';
 import { galleryImages } from '../lib/media.js';
@@ -28,6 +29,7 @@ export default function ListingDetail() {
   const { state, dispatch } = useStore();
   const { toast } = useToast();
   const [report, setReport] = useState(false);
+  const requireAuth = useAuthGate();
 
   const listing = all.find((l) => l.id === id);
 
@@ -70,6 +72,7 @@ export default function ListingDetail() {
   };
 
   const onMessage = () => {
+    if (!requireAuth('message')) return;
     dispatch({ type: 'START_CONVERSATION', sellerId: seller.id, listingId: listing.id });
     const conv = state.conversations.find((c) => c.sellerId === seller.id && c.listingId === listing.id);
     navigate(`/messages/${conv ? conv.id : 'new'}`, { state: { sellerId: seller.id, listingId: listing.id } });
@@ -92,7 +95,7 @@ export default function ListingDetail() {
               <Share2 size={18} />
             </button>
             <button
-              onClick={() => dispatch({ type: 'TOGGLE_SAVE', id: listing.id })}
+              onClick={() => requireAuth('save', () => dispatch({ type: 'TOGGLE_SAVE', id: listing.id }))}
               className="press glass grid h-10 w-10 place-items-center rounded-full"
               aria-label="Save"
             >
