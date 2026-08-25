@@ -22,6 +22,11 @@ import {
   VEHICLE_TYPES, FUEL_TYPES, BODY_TYPES, VEHICLE_MAKES, VEHICLE_MAKE_NAMES,
   PROPERTY_TYPES, ELECTRONICS_TYPES, ELECTRONICS_BRANDS,
   JOB_CATEGORIES, JOB_TYPES, WORK_MODES, EXPERIENCE_LEVELS, EDUCATION_LEVELS,
+  // Shared with the filter schemas so what a seller answers is exactly what a
+  // buyer can filter on — one list, not two that drift apart.
+  SERVICE_CATEGORIES, SERVICE_PRICING, SERVICE_AVAILABILITY, SERVICE_AREAS,
+  SERVICE_EXPERIENCE, SERVICE_WORKS_AT, PET_KINDS, CLOTHING_SIZES, GENDERS,
+  COLOURS, FASHION_MATERIALS, FASHION_BRANDS, FURNITURE_MATERIALS,
 } from './filterSchema.js';
 
 const TRANSMISSIONS = ['Automatic', 'Manual', 'Semi-automatic', 'Other'];
@@ -32,11 +37,6 @@ const PROPERTY_STATUS = ['New', 'Existing', 'Newly renovated'];
 const STORAGE = ['16GB', '32GB', '64GB', '128GB', '256GB', '512GB', '1TB', '2TB'];
 const RAM = ['2GB', '3GB', '4GB', '6GB', '8GB', '12GB', '16GB', '32GB'];
 const OS = ['Android', 'iOS', 'Windows', 'macOS', 'HarmonyOS', 'Other'];
-const CLOTHING_SIZES = ['XS', 'S', 'M', 'L', 'XL', 'XXL', 'One size'];
-const GENDERS = ['Men', 'Women', 'Unisex', 'Kids'];
-const COLOURS = ['Black', 'White', 'Grey', 'Silver', 'Blue', 'Red', 'Green', 'Brown', 'Beige', 'Gold', 'Multi'];
-const MATERIALS = ['Cotton', 'Leather', 'Denim', 'Wool', 'Polyester', 'Silk', 'Linen', 'Synthetic'];
-const SERVICE_PRICING = ['Hourly rate', 'Fixed price', 'Quote on request'];
 const INDUSTRIES = ['Technology', 'Finance', 'Mining', 'Retail', 'Healthcare', 'Education', 'Government', 'NGO', 'Agriculture', 'Construction', 'Hospitality', 'Other'];
 
 // chips store an array, select/text store a string — normalise to one value.
@@ -149,11 +149,11 @@ const FASHION = {
   photoSlots: ['Front', 'Back', 'Detail', 'Label / tag', 'On (optional)'],
   fields: [
     { key: 'type', label: 'Product type', type: 'chips', options: ['Shoes', 'Clothing', 'Bags', 'Watches', 'Accessories'], top: 'subcategory', required: true },
-    { key: 'brand', label: 'Brand', type: 'select', options: ['Nike', 'Adidas', 'Gucci', 'Louis Vuitton', 'Zara', 'H&M', 'Rolex', 'Puma', 'Levi’s', 'Prada', 'Versace', 'Other'], top: 'brand', placeholder: 'Search or type a brand…' },
+    { key: 'brand', label: 'Brand', type: 'select', options: FASHION_BRANDS, top: 'brand', placeholder: 'Search or type a brand…' },
     { key: 'gender', label: 'Category', type: 'chips', options: GENDERS },
     { key: 'size', label: 'Size', type: 'chips', options: CLOTHING_SIZES, helper: 'Or type a specific size (e.g. EU 43).' },
-    { key: 'colour', label: 'Colour', type: 'chips', options: COLOURS },
-    { key: 'material', label: 'Material', type: 'chips', options: MATERIALS },
+    { key: 'color', label: 'Colour', type: 'chips', options: COLOURS },
+    { key: 'material', label: 'Material', type: 'chips', options: FASHION_MATERIALS },
     { key: 'condition', label: 'Condition', type: 'chips', options: CONDITIONS, top: 'condition', required: true },
   ],
 };
@@ -185,12 +185,12 @@ const SERVICES = {
   photo: { level: 'optional', min: 0, title: 'Photos of your work (optional)', help: 'Show examples of your work to help customers understand what you offer.' },
   photoSlots: ['Work sample 1', 'Work sample 2', 'Team / tools', 'Additional'],
   fields: [
-    { key: 'serviceCategory', label: 'Service category', type: 'select', options: ['Moving', 'Cleaning', 'Plumbing', 'Electrical', 'Construction', 'Beauty', 'Tutoring', 'Photography', 'IT & Repairs', 'Catering', 'Transport', 'Other'], top: 'subcategory', required: true, placeholder: 'Search or type…' },
+    { key: 'serviceCategory', label: 'Service category', type: 'select', options: SERVICE_CATEGORIES, top: 'subcategory', required: true, placeholder: 'Search or type…' },
     { key: 'pricingModel', label: 'Pricing model', type: 'chips', options: SERVICE_PRICING, multi: false, required: true },
-    { key: 'experience', label: 'Experience', type: 'chips', options: ['Under 1 year', '1–3 years', '3–5 years', '5+ years'] },
-    { key: 'availability', label: 'Availability', type: 'chips', options: ['Weekdays', 'Weekends', 'Evenings', '24/7', 'By appointment'], multi: true },
-    { key: 'serviceArea', label: 'Service area', type: 'chips', options: ['Within my town', 'Province-wide', 'Nationwide', 'Online / remote'], multi: true, helper: 'How far will you travel for work?' },
-    { key: 'worksAt', label: 'Where you work', type: 'chips', options: ['I travel to clients', 'At my premises', 'Either'] },
+    { key: 'experience', label: 'Experience', type: 'chips', options: SERVICE_EXPERIENCE },
+    { key: 'availability', label: 'Availability', type: 'chips', options: SERVICE_AVAILABILITY, multi: true },
+    { key: 'serviceArea', label: 'Service area', type: 'chips', options: SERVICE_AREAS, multi: true, helper: 'How far will you travel for work?' },
+    { key: 'worksAt', label: 'Where you work', type: 'chips', options: SERVICE_WORKS_AT },
     { key: 'qualification', label: 'Qualifications / certifications', type: 'text', helper: 'e.g. Licensed electrician' },
   ],
 };
@@ -204,8 +204,8 @@ const FURNITURE = {
   fields: [
     { key: 'type', label: 'Type', type: 'chips', options: ['Sofa', 'Table', 'Chair', 'Bed', 'Storage', 'Lighting', 'Desk', 'Other'], top: 'subcategory' },
     { key: 'brand', label: 'Brand', type: 'text', helper: 'Optional — e.g. Fogia' },
-    { key: 'material', label: 'Material', type: 'chips', options: ['Wood', 'Metal', 'Glass', 'Fabric', 'Leather', 'Plastic', 'Rattan'] },
-    { key: 'colour', label: 'Colour', type: 'chips', options: COLOURS },
+    { key: 'material', label: 'Material', type: 'chips', options: FURNITURE_MATERIALS },
+    { key: 'color', label: 'Colour', type: 'chips', options: COLOURS },
     { key: 'condition', label: 'Condition', type: 'chips', options: CONDITIONS, top: 'condition', required: true },
   ],
 };
@@ -215,7 +215,7 @@ const PETS = {
   photo: { level: 'required', min: 1, title: 'Add photos of the pet', help: 'Clear, recent photos help buyers connect with your pet.' },
   photoSlots: ['Photo 1', 'Photo 2', 'Photo 3', 'Additional'],
   fields: [
-    { key: 'type', label: 'Type', type: 'chips', options: ['Dogs', 'Cats', 'Birds', 'Horses', 'Fish', 'Other'], top: 'subcategory', required: true },
+    { key: 'type', label: 'Type', type: 'chips', options: PET_KINDS, top: 'subcategory', required: true },
     { key: 'breed', label: 'Breed', type: 'text', helper: 'e.g. Boerboel' },
     { key: 'age', label: 'Age', type: 'text', helper: 'e.g. 8 weeks' },
     { key: 'vaccinated', label: 'Vaccinated', type: 'toggle' },

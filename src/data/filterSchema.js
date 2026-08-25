@@ -78,6 +78,24 @@ export const LAND_USE = ['Residential', 'Commercial', 'Agricultural', 'Industria
 export const ELECTRONICS_TYPES = ['Phones', 'Computers', 'TV & Audio', 'Gaming', 'Cameras', 'Accessories'];
 export const ELECTRONICS_BRANDS = ['Apple', 'Samsung', 'Sony', 'LG', 'Dell', 'HP', 'Lenovo', 'Asus', 'Google', 'Xiaomi', 'Huawei', 'Microsoft', 'Canon', 'Nikon', 'Other'];
 
+// Services — shared with the listing flow so a seller's answers are exactly
+// the values a buyer can filter on.
+export const SERVICE_CATEGORIES = ['Moving', 'Cleaning', 'Plumbing', 'Electrical', 'Construction', 'Beauty', 'Tutoring', 'Photography', 'IT & Repairs', 'Catering', 'Transport', 'Other'];
+export const SERVICE_PRICING = ['Hourly rate', 'Fixed price', 'Quote on request'];
+export const SERVICE_AVAILABILITY = ['Weekdays', 'Weekends', 'Evenings', '24/7', 'By appointment'];
+export const SERVICE_AREAS = ['Within my town', 'Province-wide', 'Nationwide', 'Online / remote'];
+export const SERVICE_EXPERIENCE = ['Under 1 year', '1–3 years', '3–5 years', '5+ years'];
+export const SERVICE_WORKS_AT = ['I travel to clients', 'At my premises', 'Either'];
+
+// Pets, fashion, furniture
+export const PET_KINDS = ['Dogs', 'Cats', 'Birds', 'Horses', 'Fish', 'Other'];
+export const CLOTHING_SIZES = ['XS', 'S', 'M', 'L', 'XL', 'XXL', 'One size'];
+export const GENDERS = ['Men', 'Women', 'Unisex', 'Kids'];
+export const COLOURS = ['Black', 'White', 'Grey', 'Silver', 'Blue', 'Red', 'Green', 'Brown', 'Beige', 'Gold', 'Multi'];
+export const FASHION_MATERIALS = ['Cotton', 'Leather', 'Denim', 'Wool', 'Polyester', 'Silk', 'Linen', 'Synthetic'];
+export const FASHION_BRANDS = ['Nike', 'Adidas', 'Gucci', 'Louis Vuitton', 'Zara', 'H&M', 'Rolex', 'Puma', 'Levi’s', 'Prada', 'Versace', 'Other'];
+export const FURNITURE_MATERIALS = ['Wood', 'Metal', 'Glass', 'Fabric', 'Leather', 'Plastic', 'Rattan'];
+
 // Jobs
 export const JOB_CATEGORIES = ['Sales', 'IT & Software', 'Finance', 'Engineering', 'Healthcare', 'Education', 'Admin', 'Marketing', 'Mining', 'Hospitality', 'Other'];
 export const JOB_TYPES = ['Full-time', 'Part-time', 'Contract', 'Temporary', 'Internship'];
@@ -105,6 +123,20 @@ const PRICE_RANGES_GENERIC = [
   { label: 'K5k–20k', min: 5000, max: 20000 },
   { label: 'K20k–100k', min: 20000, max: 100000 },
   { label: 'K100k+', min: 100000 },
+];
+// Services are quoted per hour or per job, so the generic K5k–K100k ladder is
+// the wrong shape entirely — most jobs land under K2,000.
+const SERVICE_RATE_RANGES = [
+  { label: 'Under K200', max: 200 },
+  { label: 'K200–500', min: 200, max: 500 },
+  { label: 'K500–1,500', min: 500, max: 1500 },
+  { label: 'K1,500+', min: 1500 },
+];
+const PET_PRICE_RANGES = [
+  { label: 'Under K1k', max: 1000 },
+  { label: 'K1k–5k', min: 1000, max: 5000 },
+  { label: 'K5k–15k', min: 5000, max: 15000 },
+  { label: 'K15k+', min: 15000 },
 ];
 const SALARY_RANGES = [
   { label: 'Under K5k/mo', max: 5000 },
@@ -222,7 +254,126 @@ const JOBS_SCHEMA = {
   ],
 };
 
-// Generic fallback (fashion, furniture, sports, collectibles, pets, boats, services, business, everything)
+// ---------------- Services ----------------
+// No brand, no condition: you don't buy a "used" plumber. What a buyer
+// actually decides on is rate, reach, availability and track record.
+const SERVICES_SCHEMA = {
+  id: 'services',
+  filters: [
+    price(SERVICE_RATE_RANGES, { label: 'Rate' }),
+    location(),
+    { key: 'pricingModel', label: 'Charged', type: 'chips', field: 'pricingModel', options: SERVICE_PRICING, quick: true },
+    { key: 'availability', label: 'Availability', type: 'chips', field: 'availability', options: SERVICE_AVAILABILITY, quick: true },
+    { key: 'serviceArea', label: 'Service area', type: 'chips', field: 'serviceArea', options: SERVICE_AREAS },
+    { key: 'worksAt', label: 'Where they work', type: 'chips', field: 'worksAt', options: SERVICE_WORKS_AT },
+    { key: 'experience', label: 'Experience', type: 'chips', field: 'experience', options: SERVICE_EXPERIENCE },
+    { key: 'serviceCategory', label: 'Service type', type: 'select', field: 'serviceCategory', options: SERVICE_CATEGORIES, searchable: true, multi: true, placeholder: 'Any service' },
+    { key: 'sellerType', label: 'Listed by', type: 'chips', field: 'sellerType', options: SELLER_TYPES },
+  ],
+};
+
+// ---------------- Pets ----------------
+// Condition is offensive here and brand is meaningless. Health and provenance
+// are what a buyer screens on.
+const PETS_SCHEMA = {
+  id: 'pets',
+  filters: [
+    price(PET_PRICE_RANGES),
+    location(),
+    { key: 'vaccinated', label: 'Vaccinated', type: 'toggle', field: 'vaccinated', quick: true },
+    { key: 'breed', label: 'Breed', type: 'select', field: 'breed', searchable: true, multi: true, quick: true, placeholder: 'Any breed' },
+    { key: 'pedigree', label: 'Pedigree / papers', type: 'toggle', field: 'pedigree' },
+    { key: 'petType', label: 'Type', type: 'chips', field: 'type', options: PET_KINDS },
+    { key: 'sellerType', label: 'Listed by', type: 'chips', field: 'sellerType', options: SELLER_TYPES },
+  ],
+};
+
+// ---------------- Fashion ----------------
+// The one generic category where brand genuinely leads the decision.
+const FASHION_SCHEMA = {
+  id: 'fashion',
+  filters: [
+    { key: 'brand', label: 'Brand', type: 'select', field: 'brand', options: FASHION_BRANDS, searchable: true, multi: true, quick: true, placeholder: 'Any brand' },
+    { key: 'size', label: 'Size', type: 'chips', field: 'size', options: CLOTHING_SIZES, quick: true },
+    price(PRICE_RANGES_GENERIC),
+    location(),
+    { key: 'gender', label: 'Department', type: 'chips', field: 'gender', options: GENDERS, quick: true },
+    { key: 'condition', label: 'Condition', type: 'chips', field: 'condition', options: CONDITIONS, quick: true },
+    { key: 'colour', label: 'Colour', type: 'chips', field: 'color', options: COLOURS },
+    { key: 'material', label: 'Material', type: 'chips', field: 'material', options: FASHION_MATERIALS },
+    { key: 'sellerType', label: 'Listed by', type: 'chips', field: 'sellerType', options: SELLER_TYPES },
+  ],
+};
+
+// ---------------- Furniture ----------------
+const FURNITURE_SCHEMA = {
+  id: 'furniture',
+  filters: [
+    price(PRICE_RANGES_GENERIC),
+    location(),
+    { key: 'material', label: 'Material', type: 'chips', field: 'material', options: FURNITURE_MATERIALS, quick: true },
+    { key: 'condition', label: 'Condition', type: 'chips', field: 'condition', options: CONDITIONS, quick: true },
+    { key: 'colour', label: 'Colour', type: 'chips', field: 'color', options: COLOURS, quick: true },
+    { key: 'sellerType', label: 'Listed by', type: 'chips', field: 'sellerType', options: SELLER_TYPES },
+  ],
+};
+
+// ---------------- Sports & collectibles ----------------
+// Brand here is data-driven: it appears only when the listings on screen
+// actually carry one, and drops out silently when they don't.
+const SPORTS_SCHEMA = {
+  id: 'sports',
+  filters: [
+    price(PRICE_RANGES_GENERIC),
+    location(),
+    { key: 'condition', label: 'Condition', type: 'chips', field: 'condition', options: CONDITIONS, quick: true },
+    { key: 'brand', label: 'Brand', type: 'select', field: 'brand', searchable: true, multi: true, quick: true, placeholder: 'Any brand' },
+    { key: 'sellerType', label: 'Listed by', type: 'chips', field: 'sellerType', options: SELLER_TYPES },
+  ],
+};
+
+const COLLECTIBLES_SCHEMA = {
+  id: 'collectibles',
+  filters: [
+    price(PRICE_RANGES_GENERIC),
+    location(),
+    { key: 'condition', label: 'Condition', type: 'chips', field: 'condition', options: CONDITIONS, quick: true },
+    { key: 'brand', label: 'Maker / brand', type: 'select', field: 'brand', searchable: true, multi: true, quick: true, placeholder: 'Any maker' },
+    { key: 'sellerType', label: 'Listed by', type: 'chips', field: 'sellerType', options: SELLER_TYPES },
+  ],
+};
+
+// ---------------- Boats ----------------
+// Boats use the vehicle listing form, so they deserve vehicle-shaped filters
+// rather than the generic brand/condition pair.
+const BOATS_SCHEMA = {
+  id: 'boats',
+  filters: [
+    { key: 'make', label: 'Make / brand', type: 'select', field: 'brand', searchable: true, multi: true, quick: true, placeholder: 'Any make' },
+    price(PRICE_RANGES_VEHICLE),
+    location(),
+    { key: 'year', label: 'Year', type: 'range', field: 'year', min: 1980, max: 2026, unit: 'yr', quick: true },
+    { key: 'condition', label: 'Condition', type: 'chips', field: 'saleCondition', options: USED_NEW, quick: true },
+    { key: 'fuel', label: 'Fuel / power', type: 'chips', field: 'fuel', options: FUEL_TYPES },
+    { key: 'sellerType', label: 'Listed by', type: 'chips', field: 'sellerType', options: SELLER_TYPES },
+  ],
+};
+
+// ---------------- Business ----------------
+// Equipment, stock and premises — bought by businesses, so who is selling
+// matters more than what badge is on it.
+const BUSINESS_SCHEMA = {
+  id: 'business',
+  filters: [
+    price(PRICE_RANGES_GENERIC),
+    location(),
+    { key: 'condition', label: 'Condition', type: 'chips', field: 'condition', options: ['New', 'Used', 'Refurbished'], quick: true },
+    { key: 'sellerType', label: 'Listed by', type: 'chips', field: 'sellerType', options: SELLER_TYPES, quick: true },
+    { key: 'brand', label: 'Brand', type: 'select', field: 'brand', searchable: true, multi: true, placeholder: 'Any brand' },
+  ],
+};
+
+// Generic fallback ("Other" and anything new)
 const DEFAULT_SCHEMA = {
   id: 'default',
   filters: [
@@ -242,6 +393,14 @@ const SCHEMAS = {
   land: LAND_SCHEMA,
   electronics: ELECTRONICS_SCHEMA,
   jobs: JOBS_SCHEMA,
+  services: SERVICES_SCHEMA,
+  pets: PETS_SCHEMA,
+  fashion: FASHION_SCHEMA,
+  furniture: FURNITURE_SCHEMA,
+  sports: SPORTS_SCHEMA,
+  collectibles: COLLECTIBLES_SCHEMA,
+  boats: BOATS_SCHEMA,
+  business: BUSINESS_SCHEMA,
   default: DEFAULT_SCHEMA,
 };
 
@@ -270,13 +429,18 @@ export function resolveOptions(def, values) {
 export function hydrateSchema(schema, listings) {
   return {
     ...schema,
-    filters: schema.filters.map((def) => {
-      if ((def.type === 'select' || def.type === 'chips') && !def.options && !def.optionsFrom) {
-        const field = def.field || def.key;
-        const opts = [...new Set(listings.map((l) => l[field] ?? l.attrs?.[field]).filter(Boolean))].sort();
-        return { ...def, options: opts };
-      }
-      return def;
-    }),
+    filters: schema.filters
+      .map((def) => {
+        if ((def.type === 'select' || def.type === 'chips') && !def.options && !def.optionsFrom) {
+          const field = def.field || def.key;
+          const opts = [...new Set(listings.map((l) => l[field] ?? l.attrs?.[field]).filter(Boolean))].sort();
+          // A data-driven filter with nothing to offer is worse than no filter
+          // at all — it was what put an empty "Brand" chip on Services, Pets
+          // and Business. Drop it instead of rendering a dead control.
+          return opts.length ? { ...def, options: opts } : null;
+        }
+        return def;
+      })
+      .filter(Boolean),
   };
 }

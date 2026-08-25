@@ -4,7 +4,7 @@ import {
   filterBySchema, getField, isFilterActive, countActiveSchema, activeFilterList, matchFilter,
 } from '../search.js';
 import { LISTINGS } from '../../data/listings.js';
-import { schemaFor } from '../../data/filterSchema.js';
+import { schemaFor, quickFilters, hydrateSchema } from '../../data/filterSchema.js';
 import { planBenefits, boostReach, LISTING_PLANS, BOOST_OPTIONS } from '../../data/plans.js';
 import { parseQuery } from '../nlSearch.js';
 import { detectCategory, suggestPrice, suggestTitle, generateDescription, isDuplicate, fraudScore, recommend, closestOption } from '../ai.js';
@@ -193,7 +193,55 @@ describe('category-aware filter framework', () => {
     expect(schemaFor('jobs').id).toBe('jobs');
     expect(schemaFor('property').id).toBe('property');
     expect(schemaFor('property', 'Plots').id).toBe('land');
-    expect(schemaFor('fashion').id).toBe('default');
+    expect(schemaFor('fashion').id).toBe('fashion');
+    expect(schemaFor('services').id).toBe('services');
+    expect(schemaFor('somethingNew').id).toBe('default');
+  });
+
+  // Regression: Services, Pets and Business all fell through to the generic
+  // schema, so buyers were offered "Brand" for a plumber and "Condition" for a
+  // puppy. Every category now answers for its own filters.
+  it('never offers brand or condition where the concept is meaningless', () => {
+    const keysFor = (cat) => schemaFor(cat).filters.map((f) => f.key);
+
+    for (const cat of ['services', 'pets', 'jobs']) {
+      expect(keysFor(cat)).not.toContain('condition');
+    }
+    for (const cat of ['services', 'pets']) {
+      expect(keysFor(cat)).not.toContain('brand');
+    }
+    // …but it stays where it genuinely drives the decision
+    expect(keysFor('fashion')).toContain('brand');
+    expect(keysFor('fashion')).toContain('condition');
+    expect(keysFor('electronics')).toContain('brand');
+  });
+
+  it('gives each generic category filters drawn from its own listing form', () => {
+    const quickKeys = (cat) => quickFilters(schemaFor(cat)).map((f) => f.key);
+    expect(quickKeys('services')).toEqual(
+      expect.arrayContaining(['price', 'location', 'pricingModel', 'availability'])
+    );
+    expect(quickKeys('pets')).toEqual(expect.arrayContaining(['price', 'location', 'vaccinated']));
+    expect(quickKeys('furniture')).toEqual(expect.arrayContaining(['material', 'colour']));
+    expect(quickKeys('boats')).toEqual(expect.arrayContaining(['make', 'year']));
+  });
+
+  // The empty "Brand" chip on Services was a dead control: hydrated from
+  // listing data, rendered even when that data yielded zero options.
+  it('drops a data-driven filter when the listings offer no options', () => {
+    const petListings = LISTINGS.filter((l) => l.category === 'pets');
+    const keys = hydrateSchema(schemaFor('pets'), petListings).filters.map((f) => f.key);
+    expect(keys).not.toContain('breed'); // seeded pets carry no breed attribute
+
+    const withBreed = [...petListings, { ...petListings[0], attrs: { breed: 'Boerboel' } }];
+    const hydrated = hydrateSchema(schemaFor('pets'), withBreed).filters.find((f) => f.key === 'breed');
+    expect(hydrated.options).toEqual(['Boerboel']);
+  });
+
+  it('service rate ranges are scaled to services, not to generic goods', () => {
+    const rate = schemaFor('services').filters.find((f) => f.key === 'price');
+    expect(rate.label).toBe('Rate');
+    expect(rate.quickRanges[0].max).toBe(200); // not the K5,000 generic floor
   });
 
   it('land schema has no "condition" filter but property does', () => {
