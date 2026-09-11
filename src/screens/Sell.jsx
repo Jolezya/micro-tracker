@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useParams, Link } from 'react-router-dom';
 import { motion, AnimatePresence, Reorder } from 'framer-motion';
 import {
-  ChevronLeft, ChevronRight, ImagePlus, Sparkles, Wand2, X, Check, Camera,
+  ChevronLeft, ChevronRight, ImagePlus, Sparkles, Wand2, X, Check, Camera, Rocket, Crown,
   MapPin, Tag, Eye, Star, GripVertical, Phone, Pencil, Info,
 } from 'lucide-react';
 import { Container } from '../components/layout/Header.jsx';
@@ -291,7 +291,7 @@ export default function Sell() {
       {/* Footer CTA */}
       {step > 0 && (
         <div className="dock-above fixed inset-x-0 z-40 px-3 lg:bottom-0 lg:px-0">
-          <div className="glass mx-auto flex max-w-3xl items-center gap-3 border-t px-4 py-3 pb-safe">
+          <div className="glass-cta mx-auto flex max-w-3xl items-center gap-3 border-t px-4 py-3 pb-safe">
             {step === 1 && <Button full size="lg" onClick={next}>Continue with {plan.name} <ChevronRight size={18} /></Button>}
             {step === 2 && (() => {
               const count = form.photos.length;
@@ -354,6 +354,17 @@ function CategoryStep({ value, onSelect }) {
 /* ------------------------------------------------------------------ */
 /* Step 2 — Plan                                                       */
 /* ------------------------------------------------------------------ */
+// Each plan carries its own resting tint so the three read as distinct
+// products, while SELECTION stays one consistent brand-green signal on all
+// three — selection is a system state, not part of a plan's identity.
+// Tokens, not the hex on the plan record, so both themes stay legible.
+const PLAN_TONE = {
+  mahala: { icon: 'rgb(var(--ink) / 0.06)', hero: 'rgb(var(--ink) / 0.05)', ink: 'rgb(var(--ink))', rest: 'transparent' },
+  premium: { icon: 'rgb(var(--accent) / 0.12)', hero: 'rgb(var(--accent) / 0.10)', ink: 'rgb(var(--accent))', rest: 'rgb(var(--accent) / 0.04)' },
+  gold: { icon: 'rgb(var(--gold) / 0.14)', hero: 'rgb(var(--gold) / 0.12)', ink: 'rgb(var(--gold))', rest: 'rgb(var(--gold) / 0.05)' },
+};
+const PLAN_HERO_ICON = { mahala: Check, premium: Rocket, gold: Crown };
+
 function PlanStep({ value, onSelect, category }) {
   return (
     <div>
@@ -362,38 +373,88 @@ function PlanStep({ value, onSelect, category }) {
       <div className="mt-4 space-y-3">
         {LISTING_PLANS.map((p) => {
           const active = value === p.id;
+          const tone = PLAN_TONE[p.id] || PLAN_TONE.mahala;
+          const HeroIcon = PLAN_HERO_ICON[p.id] || Check;
           return (
-            <button key={p.id} onClick={() => onSelect(p.id)} className={`press relative block w-full rounded-3xl border p-4 text-left transition ${active ? 'border-transparent shadow-lift' : 'border-hairline'} bg-surface`} style={active ? { boxShadow: `0 0 0 2px ${p.accent}` } : undefined}>
-              {p.recommended && <span className="absolute -top-2.5 right-4 rounded-full bg-accent px-2.5 py-0.5 text-[11px] font-bold text-accent-ink">Recommended</span>}
-              <div className="flex items-start gap-3">
-                <span className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl text-2xl" style={{ background: `${p.accent}1f` }}>{p.emoji}</span>
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-center gap-2">
-                    <h3 className="text-lg font-extrabold text-ink">{p.name}</h3>
-                    <span className="text-sm font-medium text-muted">· {p.subtitle}</span>
-                  </div>
-                  <div className="mt-0.5 flex items-baseline gap-1.5">
-                    <span className="text-xl font-extrabold text-ink">{p.price === 0 ? 'Free' : kr(p.price)}</span>
-                    {p.price > 0 && <span className="text-xs text-muted">per listing</span>}
-                  </div>
-                  <p className="mt-0.5 text-sm text-muted">{p.positioning}</p>
-                  <div className="mt-2 flex flex-wrap gap-1.5">
-                    <Fact>{p.durationDays} days live</Fact>
-                    <Fact>{p.photoLimit} photos</Fact>
-                    <Fact>{p.visibility}</Fact>
-                  </div>
-                </div>
-                <span className={`mt-1 grid h-6 w-6 shrink-0 place-items-center rounded-full border-2 ${active ? 'border-transparent text-white' : 'border-line/30'}`} style={active ? { background: p.accent } : undefined}>
-                  {active && <Check size={14} strokeWidth={3} />}
+            <button
+              key={p.id}
+              onClick={() => onSelect(p.id)}
+              aria-pressed={active}
+              className="press relative block w-full overflow-hidden rounded-[26px] bg-surface text-left transition"
+              style={{
+                // 2px brand green when chosen, a hairline when not — drawn as an
+                // inset ring so the border never shifts the card's geometry.
+                boxShadow: active
+                  ? '0 0 0 2px rgb(var(--accent)) inset, 0 10px 28px -14px rgb(var(--accent) / 0.45)'
+                  : '0 0 0 1px rgb(var(--line) / 0.16) inset',
+                background: active ? 'rgb(var(--accent) / 0.05)' : tone.rest,
+              }}
+            >
+              {/* The badge is part of the card, not floating above it */}
+              {p.recommended && (
+                <span
+                  className="block px-[18px] py-1.5 text-[10.5px] font-extrabold uppercase tracking-[0.14em]"
+                  style={{ background: 'rgb(var(--accent))', color: 'rgb(var(--accent-ink))' }}
+                >
+                  Most popular
                 </span>
+              )}
+
+              <div className="p-[18px]">
+                {/* PLAN → OUTCOME */}
+                <div className="flex items-start gap-3">
+                  <span className="grid h-10 w-10 shrink-0 place-items-center rounded-[14px] text-[21px]" style={{ background: tone.icon }}>
+                    {p.emoji}
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <h3 className="text-[19px] font-extrabold leading-tight tracking-tight text-ink">{p.name}</h3>
+                    <p className="mt-0.5 text-[13px] font-semibold" style={{ color: tone.ink, opacity: p.id === 'mahala' ? 0.55 : 1 }}>
+                      {p.subtitle}
+                    </p>
+                  </div>
+                  <span
+                    className={`grid h-[26px] w-[26px] shrink-0 place-items-center rounded-full transition ${active ? 'text-white' : ''}`}
+                    style={active
+                      ? { background: 'rgb(var(--accent))', color: 'rgb(var(--accent-ink))' }
+                      : { boxShadow: '0 0 0 2px rgb(var(--line) / 0.28) inset' }}
+                  >
+                    {active && <Check size={14} strokeWidth={3.5} />}
+                  </span>
+                </div>
+
+                {/* PRICE */}
+                <div className="mt-2.5 flex items-baseline gap-1.5">
+                  <span className="text-[25px] font-extrabold leading-none tracking-tight text-ink">
+                    {p.price === 0 ? 'Free' : kr(p.price)}
+                  </span>
+                  {p.price > 0 && <span className="text-[13px] font-medium text-muted">per listing</span>}
+                </div>
+
+                {/* KEY BENEFIT — the one reason to pick this plan */}
+                <div
+                  className="mt-3 flex items-center gap-2.5 rounded-[14px] px-3 py-2"
+                  style={{ background: tone.hero }}
+                >
+                  <HeroIcon size={17} strokeWidth={2.5} className="shrink-0" style={{ color: tone.ink }} />
+                  <span className="text-[14px] font-bold leading-snug" style={{ color: tone.ink }}>
+                    {p.heroBenefit}
+                  </span>
+                </div>
+
+                {/* SUPPORTING BENEFITS */}
+                <div className="mt-2.5 flex flex-wrap gap-1.5">
+                  <Fact>{p.durationDays} days live</Fact>
+                  <Fact>{p.photoLimit} photos</Fact>
+                </div>
+
+                <AnimatePresence initial={false}>
+                  {active && p.id !== 'mahala' && (
+                    <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="mt-3 overflow-hidden border-t border-hairline pt-3">
+                      <PlanBenefitList planId={p.id} category={category} />
+                    </motion.div>
+                  )}
+                </AnimatePresence>
               </div>
-              <AnimatePresence initial={false}>
-                {active && p.id !== 'mahala' && (
-                  <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="mt-3 overflow-hidden border-t border-hairline pt-3">
-                    <PlanBenefitList planId={p.id} category={category} />
-                  </motion.div>
-                )}
-              </AnimatePresence>
             </button>
           );
         })}
@@ -406,7 +467,7 @@ function PlanStep({ value, onSelect, category }) {
   );
 }
 function Fact({ children }) {
-  return <span className="rounded-full bg-ink/5 px-2 py-0.5 text-[11px] font-medium text-muted">{children}</span>;
+  return <span className="rounded-full bg-ink/[0.055] px-2.5 py-1 text-[11.5px] font-semibold text-muted">{children}</span>;
 }
 
 /* ------------------------------------------------------------------ */

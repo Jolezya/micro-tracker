@@ -112,6 +112,9 @@ export const LISTING_PLANS = [
     name: 'Mahala',
     subtitle: 'Sell for free',
     positioning: 'List your item and reach buyers.',
+    // The one line a seller should read on the plan card — the reason to pick
+    // this plan, separate from the longer `positioning` copy used elsewhere.
+    heroBenefit: 'Everything you need to sell',
     price: 0,
     durationDays: 30,
     photoLimit: 8,
@@ -127,6 +130,7 @@ export const LISTING_PLANS = [
     name: 'Premium',
     subtitle: 'Sell faster',
     positioning: 'Get more visibility and sell faster.',
+    heroBenefit: 'Up to 3× more views',
     price: 35,
     durationDays: 45,
     photoLimit: 15,
@@ -143,6 +147,7 @@ export const LISTING_PLANS = [
     name: 'Gold',
     subtitle: 'Maximum exposure',
     positioning: 'Put your listing in front of more buyers.',
+    heroBenefit: 'Top placement + homepage',
     price: 80,
     durationDays: 60,
     photoLimit: 25,

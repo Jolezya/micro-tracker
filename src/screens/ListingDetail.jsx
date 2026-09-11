@@ -275,7 +275,7 @@ export default function ListingDetail() {
           {/* Call was a toast that dialled nobody. Sellers have no published
               number yet, so messaging is the one channel that actually
               reaches them — it gets the whole bar until calling is real. */}
-          <div className="glass mx-auto flex max-w-3xl items-center gap-3 border-t px-4 py-3 pb-safe">
+          <div className="glass-cta mx-auto flex max-w-3xl items-center gap-3 border-t px-4 py-3 pb-safe">
             <Button size="lg" onClick={onMessage} className="flex-1">
               <MessageCircle size={18} /> Message seller
             </Button>

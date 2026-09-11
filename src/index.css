@@ -192,6 +192,17 @@ input[type='number'] {
     border: 1px solid rgb(var(--line) / var(--line-alpha));
   }
 
+  /* Bottom action bars sit ON TOP of content rather than having content scroll
+     past beneath them, so .glass's 0.66 alpha lets the card underneath read
+     straight through the bar and the screen looks unfinished. Same material,
+     nearly opaque. */
+  .glass-cta {
+    background-color: rgb(var(--glass-bg) / 0.95);
+    -webkit-backdrop-filter: saturate(180%) blur(20px);
+    backdrop-filter: saturate(180%) blur(20px);
+    border: 1px solid rgb(var(--line) / var(--line-alpha));
+  }
+
   /* Floating navigation dock: a restrained translucent surface that reads as
      lifted off the page. Deliberately lighter than .glass — one soft shadow
      for depth, a hairline edge, no gloss or gradient. */
