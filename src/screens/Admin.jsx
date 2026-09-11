@@ -25,9 +25,9 @@ const TRAFFIC = [
   { d: 'Sun', v: 7300, l: 79 },
 ];
 const REPORTS = [
-  { id: 'r1', listing: 'l_pokemon', reason: 'Possible counterfeit', reporter: 'Sofie H.', when: '2h ago' },
-  { id: 'r2', listing: 'l_gucci', reason: 'Suspected replica', reporter: 'Anders K.', when: '5h ago' },
-  { id: 'r3', listing: 'l_iphone', reason: 'Price too good — scam?', reporter: 'Mia T.', when: '1d ago' },
+  { id: 'r1', listing: 'l_pokemon', reason: 'Possible counterfeit', reporter: 'Thandiwe M.', when: '2h ago' },
+  { id: 'r2', listing: 'l_gucci', reason: 'Suspected replica', reporter: 'Kelvin S.', when: '5h ago' },
+  { id: 'r3', listing: 'l_iphone', reason: 'Price too good — scam?', reporter: 'Lweendo N.', when: '1d ago' },
 ];
 const AUDIT = [
   { who: 'admin@kaira.zm', action: 'Approved listing', target: 'BMW M3 Competition', when: '12 min ago' },
@@ -69,7 +69,7 @@ export default function Admin() {
     <div className="lg:pb-8">
       <div className="glass sticky top-0 z-30 safe-top">
         <Container className="flex items-center gap-3 py-2.5" size="max-w-6xl">
-          <button onClick={() => navigate(-1)} className="press -ml-1 grid h-9 w-9 place-items-center rounded-full bg-ink/5 text-ink">
+          <button onClick={() => navigate(-1)} aria-label="Back" className="press -ml-1 grid h-9 w-9 place-items-center rounded-full bg-ink/5 text-ink">
             <ChevronLeft size={20} />
           </button>
           <div className="flex-1">
@@ -233,7 +233,7 @@ export default function Admin() {
 }
 
 function SuggestedAdditions() {
-  const { state } = useStore();
+  const { state, dispatch } = useStore();
   const { toast } = useToast();
   const rows = Object.entries(state.customEntries || {})
     .map(([k, count]) => {
@@ -262,7 +262,10 @@ function SuggestedAdditions() {
               {r.count >= 3 && <Badge tone="accent">×{r.count} · flag</Badge>}
               {r.count < 3 && <span className="text-xs font-semibold text-faint">×{r.count}</span>}
               <button
-                onClick={() => toast(`“${r.value}” added to the ${r.field} list`)}
+                onClick={() => {
+                  dispatch({ type: 'ADOPT_CUSTOM', field: r.field, value: r.value });
+                  toast(`“${r.value}” added to the ${r.field} list`);
+                }}
                 className="press inline-flex items-center gap-1 rounded-full bg-accent-soft px-2.5 py-1 text-xs font-bold text-accent"
               >
                 <ListPlus size={12} /> Add to list

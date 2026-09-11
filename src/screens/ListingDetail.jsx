@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import {
-  ChevronLeft, Heart, Share2, Flag, MapPin, MessageCircle, Phone, ShieldCheck,
+  ChevronLeft, Heart, Share2, Flag, MapPin, MessageCircle, ShieldCheck,
   Clock, Eye, Tag, ChevronRight, Sparkles, BadgeCheck, Pencil,
 } from 'lucide-react';
 import { Gallery } from '../components/Gallery.jsx';
@@ -272,11 +272,11 @@ export default function ListingDetail() {
       {/* Sticky action bar — hidden on your own listing */}
       {!mine && (
         <div className="dock-above fixed inset-x-0 z-40 px-3 lg:bottom-0 lg:px-0">
+          {/* Call was a toast that dialled nobody. Sellers have no published
+              number yet, so messaging is the one channel that actually
+              reaches them — it gets the whole bar until calling is real. */}
           <div className="glass mx-auto flex max-w-3xl items-center gap-3 border-t px-4 py-3 pb-safe">
-            <Button variant="outline" size="lg" onClick={() => toast(`Calling ${seller.name.split(' ')[0]}…`, { type: 'info' })} className="flex-1">
-              <Phone size={18} /> Call
-            </Button>
-            <Button size="lg" onClick={onMessage} className="flex-[2]">
+            <Button size="lg" onClick={onMessage} className="flex-1">
               <MessageCircle size={18} /> Message seller
             </Button>
           </div>

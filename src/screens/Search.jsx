@@ -109,7 +109,13 @@ export default function Search() {
 
   const saveSearch = () => {
     const label = (search.q || activeCat?.label || 'All listings') + (activeCount ? ` · ${activeCount} filters` : '');
-    dispatch({ type: 'SAVE_SEARCH', search: { label, category: catKey } });
+    // Store what the search actually WAS — the query, the category and the
+    // committed filter values. Saving only a label meant reopening a saved
+    // search dropped you on an unfiltered results page.
+    dispatch({
+      type: 'SAVE_SEARCH',
+      search: { label, category: catKey, categoryId: categoryId || null, q: search.q || '', sub, values },
+    });
     toast("Search saved — we'll alert you on new matches");
   };
 

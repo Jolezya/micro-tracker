@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useParams, useNavigate, useLocation, Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  ChevronLeft, Send, Tag, MapPin, ImagePlus, Plus, Check, CheckCheck, X, Phone,
+  ChevronLeft, Send, Tag, MapPin, ImagePlus, Plus, Check, CheckCheck, X, User,
 } from 'lucide-react';
 import { SmartImage } from '../components/SmartImage.jsx';
 import { Avatar, PlanBadge, Button } from '../components/ui/kit.jsx';
@@ -95,7 +95,7 @@ export default function Chat() {
       {/* Header */}
       <header className="glass sticky top-0 z-30 safe-top">
         <div className="mx-auto flex max-w-3xl items-center gap-3 px-4 py-2.5">
-          <button onClick={() => navigate('/messages')} className="press -ml-1 grid h-9 w-9 place-items-center rounded-full bg-ink/5 text-ink lg:hidden">
+          <button onClick={() => navigate('/messages')} aria-label="Back to messages" className="press -ml-1 grid h-9 w-9 place-items-center rounded-full bg-ink/5 text-ink lg:hidden">
             <ChevronLeft size={20} />
           </button>
           <Link to={`/seller/${seller.id}`} className="flex min-w-0 flex-1 items-center gap-2.5">
@@ -111,9 +111,14 @@ export default function Chat() {
               <p className="text-xs text-success">{conv.typing ? 'typing…' : 'Online now'}</p>
             </div>
           </Link>
-          <button onClick={() => toast(`Calling ${seller.name.split(' ')[0]}…`, { type: 'info' })} className="press grid h-9 w-9 place-items-center rounded-full bg-ink/5 text-ink">
-            <Phone size={18} />
-          </button>
+          {/* Call button removed — it only raised a toast. See ListingDetail. */}
+          <Link
+            to={`/seller/${seller.id}`}
+            aria-label={`View ${seller.name}'s profile`}
+            className="press grid h-9 w-9 place-items-center rounded-full bg-ink/5 text-ink"
+          >
+            <User size={18} />
+          </Link>
         </div>
 
         {/* Pinned listing */}

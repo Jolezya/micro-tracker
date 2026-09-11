@@ -43,7 +43,7 @@ function seedConversations() {
       unread: 1,
       typing: false,
       messages: [
-        m('me', 'Hi Marte — is the Submariner still available?', 190),
+        m('me', 'Hi Natasha — is the Submariner still available?', 190),
         m('them', 'Hi! Yes it is, full set with the 2022 card 🙂', 176),
         m('them', 'Happy to meet at a jeweller for authentication if that helps.', 175),
         m('me', 'Perfect. Would you take 170k?', 60),
@@ -58,7 +58,7 @@ function seedConversations() {
       typing: false,
       messages: [
         m('me', 'Is the Fogia sofa still up? Love the bouclé.', 1440),
-        m('them', 'It is! Barely used. Pickup in Frogner works best.', 1430),
+        m('them', 'It is! Barely used. Pickup in Kabulonga works best.', 1430),
         m('me', 'Great, could do this weekend. I’ll bring a van.', 1400),
         m('them', 'Saturday afternoon is perfect. See you then!', 1390),
       ],
@@ -89,9 +89,9 @@ function seedNotifications() {
     meta,
   });
   return [
-    n('message', 'New message from Marte', 'Let me think — can do 174k…', 4, { convId: 'c_seed_rolex' }),
+    n('message', 'New message from Natasha', 'Let me think — can do 174k…', 4, { convId: 'c_seed_rolex' }),
     n('price', 'Price drop', 'Tesla Model Y is now K1,050,000 (−K30,000)', 300, { listingId: 'l_tesla_y' }),
-    n('search', 'New match for “road bike”', 'Canyon Ultimate CF SLX just listed in Stavanger', 540, { listingId: 'l_roadbike' }),
+    n('search', 'New match for “road bike”', 'Canyon Ultimate CF SLX just listed in Livingstone', 540, { listingId: 'l_roadbike' }),
     n('favorite', 'Someone saved your item', 'Your listing was added to 3 favorites today', 720, {}),
     n('system', 'Welcome to Kaira', 'Your account is ready. Complete your profile to build trust.', 1440, {}),
   ];
@@ -117,6 +117,8 @@ const initialState = {
   // Custom values users typed for option fields → { "field::value": count } for
   // master-list improvement (surfaced in Admin once they recur).
   customEntries: {},
+  // custom values an admin has promoted into the master lists
+  adoptedValues: [],
 };
 
 function load() {
@@ -205,6 +207,9 @@ function reducer(state, action) {
       const recent = [action.id, ...state.recent.filter((x) => x !== action.id)].slice(0, 12);
       return { ...state, recent };
     }
+
+    case 'CLEAR_RECENT':
+      return state.recent.length ? { ...state, recent: [] } : state;
 
     case 'SAVE_SEARCH': {
       if (state.savedSearches.some((s) => s.label === action.search.label)) return state;
@@ -380,6 +385,15 @@ function reducer(state, action) {
     case 'RECORD_CUSTOM': {
       const key = `${action.field}::${action.value}`;
       return { ...state, customEntries: { ...state.customEntries, [key]: (state.customEntries[key] || 0) + 1 } };
+    }
+
+    // An admin adopting a recurring custom value into the master list: it
+    // leaves the "suggested" queue for good instead of only raising a toast.
+    case 'ADOPT_CUSTOM': {
+      const key = `${action.field}::${action.value}`;
+      if (!(key in (state.customEntries || {}))) return state;
+      const { [key]: _dropped, ...rest } = state.customEntries;
+      return { ...state, customEntries: rest, adoptedValues: [...(state.adoptedValues || []), key] };
     }
 
     case 'PATCH_SEARCH':

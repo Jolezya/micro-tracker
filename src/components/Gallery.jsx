@@ -28,6 +28,7 @@ export function Gallery({ photos, alt }) {
             <button
               key={i}
               onClick={() => setOpen(true)}
+              aria-label={`View photo ${i + 1} of ${photos.length}${alt ? ` — ${alt}` : ''}`}
               className="relative aspect-[4/3] w-full shrink-0 snap-center sm:aspect-[16/10]"
             >
               <SmartImage src={src} alt={`${alt} ${i + 1}`} className="h-full w-full" eager={i === 0} />

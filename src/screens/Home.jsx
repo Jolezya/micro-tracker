@@ -234,7 +234,14 @@ export default function Home() {
             sits tighter than the standard rail rhythm below it. */}
         {recent.length > 0 && (
           <section className="mt-[26px]">
-            <SectionHeader title="Recently viewed" action="Clear" onAction={() => {}} />
+            <SectionHeader
+              title="Recently viewed"
+              action="Clear"
+              onAction={() => {
+                dispatch({ type: 'CLEAR_RECENT' });
+                toast('Recently viewed cleared');
+              }}
+            />
             <Rail>
               {recent.map((l) => <RailCard key={l.id} listing={l} />)}
             </Rail>

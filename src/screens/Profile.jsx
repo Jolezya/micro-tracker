@@ -94,8 +94,8 @@ export default function Profile() {
         {/* Quick links */}
         <div className="mt-5 overflow-hidden rounded-3xl border border-hairline bg-surface">
           <Row icon={Heart} label="Saved items" count={saved.length} to="/saved" />
-          <Row icon={Bookmark} label="Saved searches" count={state.savedSearches.length} onClick={() => navigate('/search')} />
-          <Row icon={Users} label="Following" count={state.following.length} onClick={() => toast(`Following ${state.following.length} sellers`)} />
+          <Row icon={Bookmark} label="Saved searches" count={state.savedSearches.length} onClick={() => navigate('/saved', { state: { tab: 'searches' } })} />
+          <Row icon={Users} label="Following" count={state.following.length} onClick={() => navigate('/saved', { state: { tab: 'following' } })} />
           <Row icon={BarChart3} label="Seller analytics" to="/plans" />
           <Row icon={ShieldCheck} label="Admin dashboard" to="/admin" last />
         </div>

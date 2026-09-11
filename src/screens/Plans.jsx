@@ -27,7 +27,7 @@ export default function Plans() {
     <div className="lg:pb-10">
       <div className="glass sticky top-0 z-30 safe-top">
         <Container className="flex items-center gap-3 py-2.5">
-          <button onClick={() => navigate(-1)} className="press -ml-1 grid h-9 w-9 place-items-center rounded-full bg-ink/5 text-ink">
+          <button onClick={() => navigate(-1)} aria-label="Back" className="press -ml-1 grid h-9 w-9 place-items-center rounded-full bg-ink/5 text-ink">
             <ChevronLeft size={20} />
           </button>
           <h1 className="text-lg font-bold text-ink">Selling plans</h1>

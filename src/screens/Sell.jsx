@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useParams, Link } from 'react-router-dom';
 import { motion, AnimatePresence, Reorder } from 'framer-motion';
 import {
-  ChevronLeft, ChevronRight, ImagePlus, Sparkles, Wand2, X, Check, Camera, Crop,
+  ChevronLeft, ChevronRight, ImagePlus, Sparkles, Wand2, X, Check, Camera,
   MapPin, Tag, Eye, Star, GripVertical, Phone, Pencil, Info,
 } from 'lucide-react';
 import { Container } from '../components/layout/Header.jsx';
@@ -523,7 +523,9 @@ function PhotoStep({ form, set, plan, photo, cat, enhancing, setEnhancing, toast
       {count > 0 && (
         <div className="mt-4 flex flex-wrap gap-2">
           <Button variant="soft" size="sm" onClick={enhance} disabled={enhancing}>{enhancing ? <Spinner size={15} /> : <Sparkles size={15} />} Auto-enhance</Button>
-          <Button variant="outline" size="sm" onClick={() => toast('Crop applied')}><Crop size={15} /> Crop</Button>
+          {/* No Crop button: it reported "Crop applied" and changed nothing,
+              which is worse than not offering it. Bring it back with a real
+              cropper, not a toast. */}
           <Button variant="outline" size="sm" onClick={pickFiles}><Camera size={15} /> Add more</Button>
         </div>
       )}
