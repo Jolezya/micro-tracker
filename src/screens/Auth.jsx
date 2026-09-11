@@ -52,6 +52,15 @@ export default function Auth() {
   // Where to go afterwards, and why we asked. Both come from the gate that
   // sent the user here, so they land back on what they were doing.
   const returnTo = location.state?.returnTo || '/';
+
+  // Leaving without signing up is a real history step back — NOT a navigate to
+  // returnTo, which is the screen that gated you and would gate you again.
+  // `key === 'default'` means /auth was opened cold (shared link, refresh), so
+  // there is nothing behind it and home is the only sensible exit.
+  const goBack = () => {
+    if (location.key === 'default') navigate('/', { replace: true });
+    else navigate(-1);
+  };
   const reason = location.state?.reason ? gateReason(location.state.reason) : null;
 
   const [mode, setMode] = useState(location.state?.mode === 'signin' ? 'signin' : 'signup');
@@ -133,7 +142,7 @@ export default function Auth() {
       <div className="mx-auto flex w-full max-w-md flex-1 flex-col px-6 pb-10 pt-4">
         {/* Back / close */}
         <button
-          onClick={() => (step === 'profile' ? setStep('credentials') : navigate(returnTo))}
+          onClick={() => (step === 'profile' ? setStep('credentials') : goBack())}
           className="press -ml-1 mb-2 grid h-10 w-10 place-items-center rounded-full text-ink hover:bg-ink/5"
           aria-label="Back"
         >

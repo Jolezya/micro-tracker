@@ -16,13 +16,20 @@ export function useAuthGate() {
   const navigate = useNavigate();
   const location = useLocation();
 
+  // opts.replace — for screens that gate on MOUNT rather than on a tap (Sell).
+  // Those must replace the history entry instead of pushing onto it: otherwise
+  // the gated screen stays in history, going back re-mounts it, the gate fires
+  // again and you are bounced straight to /auth — a back button that looks
+  // broken. Action gates (save, message) push as normal, so back returns to
+  // the listing you were reading.
   return useCallback(
-    (action, run) => {
+    (action, run, opts = {}) => {
       if (state.auth.status === 'authed') {
         run?.();
         return true;
       }
       navigate('/auth', {
+        replace: !!opts.replace,
         state: { reason: action, returnTo: location.pathname + location.search + location.hash },
       });
       return false;

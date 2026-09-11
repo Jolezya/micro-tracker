@@ -105,7 +105,10 @@ export default function Sell() {
   const recordCustom = (field, v) => dispatch({ type: 'RECORD_CUSTOM', field, value: v });
 
   // Listing requires an account; guests are sent to sign up and returned here.
-  useEffect(() => { requireAuth('sell'); }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  // replace: this gate fires on mount, so /auth must take this entry's place —
+  // pushing would leave /sell behind for the back button to re-enter and
+  // re-gate. returnTo still carries /sell, so signing up lands back here.
+  useEffect(() => { requireAuth('sell', undefined, { replace: true }); }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const buildListing = () => {
     const attrs = {};
