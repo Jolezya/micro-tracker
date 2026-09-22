@@ -205,7 +205,7 @@ export default function Chat() {
       {/* Composer */}
       <div className="glass sticky bottom-0 border-t safe-bottom">
         <div className="mx-auto flex max-w-3xl items-end gap-2 px-3 py-2.5">
-          <button onClick={() => setShowActions(true)} className="press grid h-11 w-11 shrink-0 place-items-center rounded-full bg-ink/5 text-ink">
+          <button onClick={() => setShowActions(true)} aria-label="Attach photo, offer or location" className="press grid h-11 w-11 shrink-0 place-items-center rounded-full bg-ink/5 text-ink">
             <Plus size={22} />
           </button>
           <div className="flex flex-1 items-end rounded-2xl border border-hairline bg-surface px-3 py-1.5">
@@ -226,6 +226,7 @@ export default function Chat() {
           <button
             onClick={() => send(text)}
             disabled={!text.trim()}
+            aria-label="Send message"
             className="press grid h-11 w-11 shrink-0 place-items-center rounded-full btn-accent disabled:opacity-40"
           >
             <Send size={19} />

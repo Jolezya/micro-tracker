@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { NavLink, Outlet, useLocation, Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Home, Search, Plus, MessageCircle, User, Bell, Sparkles } from 'lucide-react';
+import { Home, Search, Plus, MessageCircle, User, Bell, Sparkles, AlertTriangle } from 'lucide-react';
 import { useStore } from '../../lib/store.jsx';
 import { Logo } from './Logo.jsx';
 
@@ -116,6 +116,24 @@ function BottomNav() {
   );
 }
 
+// Shown only when a save has actually failed. Before this, a full localStorage
+// meant every change silently evaporated on the next reload.
+function StorageFullBanner() {
+  const { storageFull } = useStore();
+  if (!storageFull) return null;
+  return (
+    <div role="alert" className="mx-auto max-w-5xl px-4 pt-3">
+      <div className="flex items-start gap-3 rounded-2xl border border-danger/30 bg-danger/10 px-4 py-3 text-sm text-ink">
+        <AlertTriangle size={18} className="mt-0.5 shrink-0 text-danger" />
+        <div>
+          <p className="font-bold">Kaira can't save your changes — storage on this device is full.</p>
+          <p className="mt-0.5 text-muted">Remove some listing photos or old drafts, then try again. Anything you do until then will be lost when you close the app.</p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ---------------- Desktop sidebar ----------------
 function SideNav() {
   const badges = useBadges();
@@ -187,6 +205,7 @@ export function AppShell() {
     <div className="mx-auto flex min-h-[100dvh] w-full max-w-[1400px]">
       <SideNav />
       <main className="pb-dock min-w-0 flex-1 lg:pb-0">
+        <StorageFullBanner />
         <motion.div
           key={location.pathname.split('/')[1] || 'home'}
           initial={{ opacity: 0, y: 8 }}

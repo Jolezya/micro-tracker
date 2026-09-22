@@ -740,3 +740,56 @@ describe('auth rules', () => {
     expect(gateReason('unknown')).toMatch(/continue/i);
   });
 });
+
+// ---------------------------------------------------------------------------
+// Audit fixes: live seller counters, persisted prefs, admin role
+// ---------------------------------------------------------------------------
+import { reducer } from '../store.jsx';
+import { roleFor, makeAccount } from '../auth.js';
+
+describe('seller analytics are live, not a permanent zero', () => {
+  const base = {
+    recent: [], saved: [], prefs: { notifications: {} },
+    myListings: [{ id: 'l_mine', title: 'Mine', views: 0, saves: 0 }],
+  };
+
+  it('a first view increments the owner\'s counter; a repeat view within the recent window does not', () => {
+    const once = reducer(base, { type: 'VIEW', id: 'l_mine' });
+    expect(once.myListings[0].views).toBe(1);
+    const twice = reducer(once, { type: 'VIEW', id: 'l_mine' });
+    expect(twice.myListings[0].views).toBe(1); // still in `recent` → not re-counted
+  });
+
+  it('save and unsave move the owner\'s saves counter, never below zero', () => {
+    const saved = reducer(base, { type: 'TOGGLE_SAVE', id: 'l_mine' });
+    expect(saved.myListings[0].saves).toBe(1);
+    const unsaved = reducer(saved, { type: 'TOGGLE_SAVE', id: 'l_mine' });
+    expect(unsaved.myListings[0].saves).toBe(0);
+    expect(reducer(unsaved, { type: 'TOGGLE_SAVE', id: 'l_other' }).myListings[0].saves).toBe(0);
+  });
+
+  it('viewing a seeded listing leaves myListings untouched', () => {
+    expect(reducer(base, { type: 'VIEW', id: 'l_rolex' }).myListings).toEqual(base.myListings);
+  });
+});
+
+describe('notification preferences live in the store', () => {
+  it('SET_NOTIF_PREFS merges a patch and keeps the rest', () => {
+    const s = { prefs: { notifications: { messages: true, price: true, searches: true, marketing: false } } };
+    const next = reducer(s, { type: 'SET_NOTIF_PREFS', patch: { marketing: true } });
+    expect(next.prefs.notifications).toEqual({ messages: true, price: true, searches: true, marketing: true });
+  });
+});
+
+describe('admin access is a role decided at account creation', () => {
+  it('only allowlisted emails become admins, case-insensitively', () => {
+    expect(roleFor('admin@kaira.zm')).toBe('admin');
+    expect(roleFor('Admin@Kaira.ZM')).toBe('admin');
+    expect(roleFor('tester@kaira.zm')).toBe('member');
+    expect(roleFor('admin@kaira.zm.evil.com')).toBe('member');
+  });
+  it('makeAccount stamps the role', () => {
+    expect(makeAccount({ name: 'A', email: 'admin@kaira.zm', password: 'Kaira-Test-2026!' }).role).toBe('admin');
+    expect(makeAccount({ name: 'B', email: 'b@example.com', password: 'Kaira-Test-2026!' }).role).toBe('member');
+  });
+});

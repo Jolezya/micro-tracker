@@ -200,6 +200,10 @@ export default function Sell() {
     !!form.title.trim() && !needPhoto && fieldMissing.length === 0 &&
     (isJob || form.onRequest || !!form.price);
 
+  // The header badge said "Draft saved" from step 1, before anything could
+  // have been saved (drafts need a title or a photo). Now it tells the truth.
+  const draftSaved = !isEdit && state.drafts.some((d) => d.id === listingId.current);
+
   const next = () => setStep((s) => Math.min(STEPS.length - 1, s + 1));
   const back = () => (step === 0 ? navigate(-1) : setStep(step - 1));
 
@@ -240,12 +244,12 @@ export default function Sell() {
               <p className="text-xs text-muted">Step {step + 1} of {STEPS.length} · {STEPS[step]}</p>
             </div>
             <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-ink/5 px-2.5 py-1 text-xs font-semibold text-muted">
-              {isEdit ? <><Pencil size={12} /> Editing</> : <><Check size={13} className="text-accent" /> Draft saved</>}
+              {isEdit ? <><Pencil size={12} /> Editing</> : draftSaved ? <><Check size={13} className="text-accent" /> Draft saved</> : <><Info size={12} /> Not saved yet</>}
             </span>
           </div>
           <div className="mt-2.5 flex gap-1.5">
             {STEPS.map((label, i) => (
-              <button key={label} onClick={() => i < step && setStep(i)} className="flex-1 text-left" disabled={i > step}>
+              <button key={label} onClick={() => i < step && setStep(i)} aria-label={`Step ${i + 1} of ${STEPS.length}: ${label}${i < step ? ' (go back)' : i === step ? ' (current)' : ''}`} className="flex-1 text-left" disabled={i > step}>
                 <div className="h-1.5 overflow-hidden rounded-full bg-ink/10">
                   <motion.div className="h-full rounded-full bg-accent" initial={false} animate={{ width: i <= step ? '100%' : '0%' }} transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }} />
                 </div>
@@ -745,6 +749,9 @@ function ReviewStep({ form, schema, plan, cat, brand, condition, goTo, isEdit })
   const cover = form.photos[0]?.src || placeholderDataUri({ category: form.category, attrs: {}, title: form.title });
   const specs = useMemo(() => {
     return visibleFields(schema, form.fv)
+      // brand is rendered once, explicitly, above this list — including the
+      // field here again printed "Brand · Samsung" twice on the review
+      .filter((f) => f.top !== 'brand')
       .map((f) => {
         const raw = form.fv[f.key];
         if (raw == null || raw === '' || (Array.isArray(raw) && !raw.length)) return null;

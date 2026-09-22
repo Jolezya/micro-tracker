@@ -9,7 +9,7 @@ import {
   CreditCard, Activity, LayoutGrid, ScrollText, ListPlus,
 } from 'lucide-react';
 import { Container } from '../components/layout/Header.jsx';
-import { Badge, Avatar, Segmented } from '../components/ui/kit.jsx';
+import { Badge, Avatar, Segmented, EmptyState } from '../components/ui/kit.jsx';
 import { useToast } from '../components/ui/Toast.jsx';
 import { LISTINGS } from '../data/listings.js';
 import { USERS } from '../data/users.js';
@@ -40,6 +40,7 @@ const AUDIT = [
 export default function Admin() {
   const navigate = useNavigate();
   const all = useAllListings();
+  const { state } = useStore();
   const { toast } = useToast();
   const [tab, setTab] = useState('overview');
   const [queue, setQueue] = useState(REPORTS);
@@ -64,6 +65,26 @@ export default function Admin() {
     setQueue((q) => q.filter((r) => r.id !== id));
     toast(action === 'remove' ? 'Listing removed' : 'Report dismissed');
   };
+
+  // Hooks above are unconditional; the gate sits after them.
+  const isAdmin = state.auth.status === 'authed' && state.auth.user?.role === 'admin';
+  // Any signed-in user could open this before. The dashboard is fabricated
+  // demo data today, but the route itself must not be reachable by members.
+  if (!isAdmin) {
+    return (
+      <Container className="pt-10">
+        <EmptyState
+          icon={ShieldCheck}
+          title="Admins only"
+          body="This dashboard is for the Kaira team. If you're expecting access, sign in with your admin account."
+          action={<Badge tone="accent">{state.auth.status === 'authed' ? 'Signed in as a member' : 'Not signed in'}</Badge>}
+        />
+        <div className="mt-4 text-center">
+          <button onClick={() => navigate('/')} className="press text-sm font-bold text-accent">Back home</button>
+        </div>
+      </Container>
+    );
+  }
 
   return (
     <div className="lg:pb-8">

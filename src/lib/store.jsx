@@ -5,6 +5,7 @@ import React, {
   useMemo,
   useReducer,
   useRef,
+  useState,
 } from 'react';
 import { LISTINGS } from '../data/listings.js';
 import { CURRENT_USER } from '../data/users.js';
@@ -119,6 +120,8 @@ const initialState = {
   customEntries: {},
   // custom values an admin has promoted into the master lists
   adoptedValues: [],
+  // notification preferences — persisted, not component state
+  prefs: { notifications: { messages: true, price: true, searches: true, marketing: false } },
 };
 
 function load() {
@@ -133,7 +136,8 @@ function load() {
   }
 }
 
-function reducer(state, action) {
+// Exported for tests only — the app reaches it through StoreProvider.
+export function reducer(state, action) {
   switch (action.type) {
     case 'SET_THEME':
       return { ...state, theme: action.theme };
@@ -200,13 +204,30 @@ function reducer(state, action) {
       return {
         ...state,
         saved: has ? state.saved.filter((x) => x !== action.id) : [action.id, ...state.saved],
+        // The seller's own counter moves with the action, so "saves" on a
+        // listing they own is a live number rather than a permanent 0.
+        myListings: state.myListings.map((l) =>
+          l.id === action.id ? { ...l, saves: Math.max(0, (l.saves || 0) + (has ? -1 : 1)) } : l
+        ),
       };
     }
 
     case 'VIEW': {
+      // Count a view once per recent window, not on every re-open — a seller
+      // refreshing their own page should not inflate their own analytics.
+      const fresh = !state.recent.includes(action.id);
       const recent = [action.id, ...state.recent.filter((x) => x !== action.id)].slice(0, 12);
-      return { ...state, recent };
+      return {
+        ...state,
+        recent,
+        myListings: fresh
+          ? state.myListings.map((l) => (l.id === action.id ? { ...l, views: (l.views || 0) + 1 } : l))
+          : state.myListings,
+      };
     }
+
+    case 'SET_NOTIF_PREFS':
+      return { ...state, prefs: { ...state.prefs, notifications: { ...state.prefs?.notifications, ...action.patch } } };
 
     case 'CLEAR_RECENT':
       return state.recent.length ? { ...state, recent: [] } : state;
@@ -417,6 +438,9 @@ const StoreContext = createContext(null);
 export function StoreProvider({ children }) {
   const [state, dispatch] = useReducer(reducer, undefined, load);
   const first = useRef(true);
+  // Not part of `state` on purpose: putting it there would re-run the persist
+  // effect, fail again, and loop. It only exists to tell the user.
+  const [storageFull, setStorageFull] = useState(false);
 
   // Persist (skip the very first render)
   useEffect(() => {
@@ -426,8 +450,11 @@ export function StoreProvider({ children }) {
     }
     try {
       localStorage.setItem(KEY, JSON.stringify(state));
+      setStorageFull(false);
     } catch {
-      /* ignore quota errors */
+      // Quota exceeded. Swallowing this silently meant a seller could keep
+      // "publishing" and lose everything on the next reload with no warning.
+      setStorageFull(true);
     }
   }, [state]);
 
@@ -441,7 +468,7 @@ export function StoreProvider({ children }) {
     }
   }, [state.theme]);
 
-  const value = useMemo(() => ({ state, dispatch }), [state]);
+  const value = useMemo(() => ({ state, dispatch, storageFull }), [state, storageFull]);
   return <StoreContext.Provider value={value}>{children}</StoreContext.Provider>;
 }
 

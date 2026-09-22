@@ -22,7 +22,9 @@ export default function Profile() {
   const { toast } = useToast();
   const all = useAllListings();
   const [settings, setSettings] = useState(false);
-  const [notif, setNotif] = useState({ messages: true, price: true, searches: true, marketing: false });
+  // Persisted in the store — these used to be component state and reset on reload.
+  const notif = state.prefs?.notifications || { messages: true, price: true, searches: true, marketing: false };
+  const setNotif = (next) => dispatch({ type: 'SET_NOTIF_PREFS', patch: next });
   const [boostFor, setBoostFor] = useState(null);
   const [upgradeFor, setUpgradeFor] = useState(null);
 
@@ -97,7 +99,7 @@ export default function Profile() {
           <Row icon={Bookmark} label="Saved searches" count={state.savedSearches.length} onClick={() => navigate('/saved', { state: { tab: 'searches' } })} />
           <Row icon={Users} label="Following" count={state.following.length} onClick={() => navigate('/saved', { state: { tab: 'following' } })} />
           <Row icon={BarChart3} label="Seller analytics" to="/plans" />
-          <Row icon={ShieldCheck} label="Admin dashboard" to="/admin" last />
+          {state.auth.user?.role === 'admin' && <Row icon={ShieldCheck} label="Admin dashboard" to="/admin" last />}
         </div>
 
         {/* My listings */}
@@ -175,6 +177,7 @@ export default function Profile() {
                   </button>
                   <button
                     onClick={() => dispatch({ type: 'DELETE_DRAFT', id: d.id })}
+                    aria-label="Delete draft"
                     className="press grid h-9 w-9 place-items-center rounded-full text-muted hover:text-danger"
                   >
                     <Trash2 size={16} />

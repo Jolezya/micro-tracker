@@ -87,8 +87,16 @@ export function findAccount(accounts, email) {
   return (accounts || []).find((a) => emailKey(a.email) === k) || null;
 }
 
+// Who may open the admin dashboard. Membership is decided at account
+// creation from an allowlist, never from anything the client can edit later.
+export const ADMIN_EMAILS = ['admin@kaira.zm'];
+export function roleFor(email) {
+  return ADMIN_EMAILS.includes(emailKey(email)) ? 'admin' : 'member';
+}
+
 export function makeAccount({ name, email, phone = null, provider = 'email', password, town = '' }) {
   return {
+    role: roleFor(email),
     id: `u_${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`,
     name: String(name || '').trim(),
     handle: String(name || 'kaira')
