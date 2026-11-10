@@ -793,3 +793,58 @@ describe('admin access is a role decided at account creation', () => {
     expect(makeAccount({ name: 'B', email: 'b@example.com', password: 'Kaira-Test-2026!' }).role).toBe('member');
   });
 });
+
+// ---------------------------------------------------------------------------
+// Pricing model (Nov 2026): two per-listing bands + volume subscriptions
+// ---------------------------------------------------------------------------
+import {
+  PLANS, LISTING_PLAN_MAP, BIG_TICKET, bandFor, planPrice, boostPrice, BOOST_MAP,
+} from '../../data/plans.js';
+
+describe('pricing model', () => {
+  it('big-ticket categories are the ones with high-value, professional sellers', () => {
+    expect([...BIG_TICKET].sort()).toEqual(['boats', 'business', 'motorcycles', 'property', 'vehicles']);
+    expect(bandFor('vehicles')).toBe('bigTicket');
+    expect(bandFor('electronics')).toBe('everyday');
+    expect(bandFor(null)).toBe('everyday'); // no category yet → the cheaper band
+  });
+
+  it('Mahala is free in both bands — the competition is free, so listing must be', () => {
+    expect(planPrice(LISTING_PLAN_MAP.mahala, 'vehicles')).toBe(0);
+    expect(planPrice(LISTING_PLAN_MAP.mahala, 'fashion')).toBe(0);
+  });
+
+  it('everyday Premium costs about one data bundle; big-ticket scales with the sale', () => {
+    expect(planPrice(LISTING_PLAN_MAP.premium, 'electronics')).toBe(30);
+    expect(planPrice(LISTING_PLAN_MAP.premium, 'vehicles')).toBe(80);
+    expect(planPrice(LISTING_PLAN_MAP.gold, 'electronics')).toBe(75);
+    expect(planPrice(LISTING_PLAN_MAP.gold, 'property')).toBe(200);
+  });
+
+  it('nothing is priced below the K15 mobile-money floor, and tiers always ascend', () => {
+    for (const cat of ['electronics', 'vehicles']) {
+      const paid = [
+        planPrice(LISTING_PLAN_MAP.premium, cat), planPrice(LISTING_PLAN_MAP.gold, cat),
+        ...Object.values(BOOST_MAP).map((b) => boostPrice(b, cat)),
+      ];
+      expect(Math.min(...paid)).toBeGreaterThanOrEqual(15);
+      expect(planPrice(LISTING_PLAN_MAP.gold, cat)).toBeGreaterThan(planPrice(LISTING_PLAN_MAP.premium, cat));
+      expect(boostPrice(BOOST_MAP.b7, cat)).toBeGreaterThan(boostPrice(BOOST_MAP.b3, cat));
+      expect(boostPrice(BOOST_MAP.b3, cat)).toBeGreaterThan(boostPrice(BOOST_MAP.b24, cat));
+    }
+  });
+
+  it('the 3-day boost and a Premium listing cost the same — one mental model', () => {
+    expect(boostPrice(BOOST_MAP.b3, 'electronics')).toBe(planPrice(LISTING_PLAN_MAP.premium, 'electronics'));
+  });
+
+  it('subscriptions undercut pay-as-you-go for the volume they are sold to', () => {
+    const plus = PLANS.find((p) => p.id === 'plus');
+    const pro = PLANS.find((p) => p.id === 'pro');
+    const paygPlus = plus.limits.listings * planPrice(LISTING_PLAN_MAP.premium, 'electronics');
+    const paygPro = pro.limits.listings * planPrice(LISTING_PLAN_MAP.premium, 'vehicles');
+    expect(plus.price).toBeLessThan(paygPlus * 0.25); // 25 × K30 = K750 → K150
+    expect(pro.price).toBeLessThan(paygPro * 0.5);    // 40 × K80 = K3,200 → K950
+    expect(PLANS.map((p) => p.id)).toEqual(['free', 'plus', 'pro', 'enterprise']);
+  });
+});

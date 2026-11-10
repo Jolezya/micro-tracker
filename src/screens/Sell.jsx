@@ -12,7 +12,7 @@ import { Sheet } from '../components/ui/Sheet.jsx';
 import { useToast } from '../components/ui/Toast.jsx';
 import { CATEGORIES, CATEGORY_MAP } from '../data/categories.js';
 import { CURRENT_USER } from '../data/users.js';
-import { LISTING_PLANS, LISTING_PLAN_MAP } from '../data/plans.js';
+import { LISTING_PLANS, LISTING_PLAN_MAP, planPrice, bandFor, PRICING_NOTE } from '../data/plans.js';
 import { listingSchema, visibleFields, missingRequired, photoRule } from '../data/listingSchema.js';
 import { PlanBenefitList } from '../components/plan/PlanUI.jsx';
 import { OptionChips } from '../components/filters/OptionChips.jsx';
@@ -224,7 +224,7 @@ export default function Sell() {
     }
     dispatch({ type: 'PUBLISH', listing });
     dispatch({ type: 'ADD_NOTIFICATION', notification: { type: 'system', title: 'Listing published', body: `${listing.title} is now live on Kaira` } });
-    toast(plan.price ? `Published on ${plan.name} 🎉` : 'Published! Your listing is live 🎉');
+    toast(planPrice(plan, form.category) ? `Published on ${plan.name} 🎉` : 'Published! Your listing is live 🎉');
     navigate(`/listing/${listing.id}`);
   };
 
@@ -429,9 +429,9 @@ function PlanStep({ value, onSelect, category }) {
                 {/* PRICE */}
                 <div className="mt-2.5 flex items-baseline gap-1.5">
                   <span className="text-[25px] font-extrabold leading-none tracking-tight text-ink">
-                    {p.price === 0 ? 'Free' : kr(p.price)}
+                    {planPrice(p, category) === 0 ? 'Free' : kr(planPrice(p, category))}
                   </span>
-                  {p.price > 0 && <span className="text-[13px] font-medium text-muted">per listing</span>}
+                  {planPrice(p, category) > 0 && <span className="text-[13px] font-medium text-muted">per listing</span>}
                 </div>
 
                 {/* KEY BENEFIT — the one reason to pick this plan */}
@@ -463,7 +463,13 @@ function PlanStep({ value, onSelect, category }) {
           );
         })}
       </div>
-      <div className="mt-3 flex items-center justify-between px-1">
+      <p className="mt-3 px-1 text-[11.5px] leading-snug text-faint">
+        {bandFor(category) === 'bigTicket'
+          ? 'Vehicles, property and business listings reach fewer, higher-value buyers, so promotion is priced for the sale size. '
+          : ''}
+        {PRICING_NOTE}
+      </p>
+      <div className="mt-2 flex items-center justify-between px-1">
         <Link to="/plans" className="press inline-flex items-center gap-1 text-sm font-bold text-accent">Compare plans <ChevronRight size={15} /></Link>
         <Link to="/plans" className="press inline-flex items-center gap-1 text-sm font-semibold text-muted">🏢 Selling as a business?</Link>
       </div>

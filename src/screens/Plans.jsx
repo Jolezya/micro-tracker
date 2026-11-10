@@ -1,12 +1,15 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { ChevronLeft, Rocket, Building2, Check, ArrowRight, Sparkles } from 'lucide-react';
+import { ChevronLeft, Rocket, Building2, Check, ArrowRight, Sparkles, Store, X } from 'lucide-react';
 import { Container } from '../components/layout/Header.jsx';
 import { Button, Badge, Chip } from '../components/ui/kit.jsx';
 import { PlanBenefitList } from '../components/plan/PlanUI.jsx';
 import { useToast } from '../components/ui/Toast.jsx';
-import { LISTING_PLANS, CORPORATE, BOOST_OPTIONS, SELL_PRINCIPLE, boostReach } from '../data/plans.js';
+import {
+  LISTING_PLANS, CORPORATE, BOOST_OPTIONS, SELL_PRINCIPLE, boostReach,
+  PLANS, planPrice, boostPrice, bandFor, BAND_LABEL, PRICING_NOTE,
+} from '../data/plans.js';
 import { CATEGORIES } from '../data/categories.js';
 import { kwacha } from '../lib/format.js';
 
@@ -54,8 +57,16 @@ export default function Plans() {
           </div>
         </div>
 
+        {/* Two price bands — say so plainly, next to the switch that reveals it */}
+        <p className="mx-auto mt-3 max-w-md text-center text-xs text-muted">
+          Showing <span className="font-semibold text-ink">{BAND_LABEL[bandFor(cat)]}</span> prices.
+          {bandFor(cat) === 'bigTicket'
+            ? ' Fewer, higher-value buyers — promotion is priced for the size of the sale.'
+            : ' Vehicles, property and business listings are priced separately.'}
+        </p>
+
         {/* Plan cards */}
-        <div className="mt-6 grid gap-4 lg:grid-cols-3">
+        <div className="mt-5 grid gap-4 lg:grid-cols-3">
           {LISTING_PLANS.map((p, i) => (
             <motion.div
               key={p.id}
@@ -78,8 +89,8 @@ export default function Plans() {
               </div>
               <p className="mt-2 text-sm text-muted">{p.positioning}</p>
               <div className="mt-3 flex items-end gap-1">
-                <span className="text-3xl font-extrabold text-ink">{p.price === 0 ? 'Free' : kwacha(p.price)}</span>
-                {p.price > 0 && <span className="mb-1 text-sm text-muted">/ listing</span>}
+                <span className="text-3xl font-extrabold text-ink">{planPrice(p, cat) === 0 ? 'Free' : kwacha(planPrice(p, cat))}</span>
+                {planPrice(p, cat) > 0 && <span className="mb-1 text-sm text-muted">/ listing</span>}
               </div>
               <div className="mt-2 flex flex-wrap gap-1.5">
                 <Fact>{p.durationDays} days live</Fact>
@@ -112,12 +123,48 @@ export default function Plans() {
                     <p className="font-bold text-ink">{b.label}</p>
                     {b.popular && <Badge tone="accent">Popular</Badge>}
                   </div>
-                  <p className="mt-1 text-2xl font-extrabold text-ink">{kwacha(b.price)}</p>
+                  <p className="mt-1 text-2xl font-extrabold text-ink">{kwacha(boostPrice(b, cat))}</p>
                   <p className="text-xs text-muted">{b.blurb}</p>
                 </div>
               ))}
             </div>
             <p className="mt-3 text-xs text-muted">Boost reach scales with your plan — {boostReach('gold')} on Gold.</p>
+          </div>
+        </section>
+
+        {/* Subscriptions — for sellers who list in volume */}
+        <section className="mt-10">
+          <div className="text-center">
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-ink/5 px-3 py-1 text-xs font-bold text-ink">
+              <Store size={13} /> Sell in volume
+            </span>
+            <h3 className="mt-3 text-xl font-extrabold tracking-tight text-ink">Monthly plans for shops, dealers & agents</h3>
+            <p className="mx-auto mt-1 max-w-md text-sm text-muted">Premium placement on everything you list, for less than paying per listing — plus the tools a business needs.</p>
+          </div>
+          <div className="mt-5 grid gap-4 lg:grid-cols-3">
+            {PLANS.filter((p) => p.id !== 'enterprise').map((p) => (
+              <div key={p.id} className={`flex flex-col rounded-3xl border p-5 ${p.popular ? 'border-accent shadow-lift' : 'border-hairline'} bg-surface`}>
+                <div className="flex items-center justify-between">
+                  <h4 className="text-lg font-extrabold text-ink">{p.name}</h4>
+                  {p.popular && <Badge tone="accent">Most popular</Badge>}
+                </div>
+                <p className="mt-0.5 text-xs font-semibold text-muted">{p.tagline}</p>
+                <div className="mt-3 flex items-end gap-1">
+                  <span className="text-3xl font-extrabold text-ink">{p.price === 0 ? 'Free' : kwacha(p.price)}</span>
+                  {p.price > 0 && <span className="mb-1 text-sm text-muted">/ month</span>}
+                </div>
+                <ul className="mt-4 space-y-2">
+                  {p.features.map((f) => (
+                    <li key={f.text} className={`flex items-start gap-2 text-sm ${f.included ? 'text-ink' : 'text-faint line-through'}`}>
+                      {f.included
+                        ? <Check size={15} className="mt-0.5 shrink-0 text-accent" strokeWidth={2.6} />
+                        : <X size={15} className="mt-0.5 shrink-0 text-faint" strokeWidth={2.2} />}
+                      {f.text}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ))}
           </div>
         </section>
 
@@ -145,7 +192,7 @@ export default function Plans() {
           </div>
         </section>
 
-        <p className="mt-8 text-center text-xs text-faint">Prices in Kwacha (ZMW), per listing. Cancel or change anytime.</p>
+        <p className="mt-8 text-center text-xs text-faint">{PRICING_NOTE} Cancel or change a monthly plan anytime.</p>
       </Container>
     </div>
   );

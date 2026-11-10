@@ -7,7 +7,7 @@ import { useToast } from '../ui/Toast.jsx';
 import { useStore } from '../../lib/store.jsx';
 import { kwacha } from '../../lib/format.js';
 import {
-  LISTING_PLANS, LISTING_PLAN_MAP, BOOST_OPTIONS, planBenefits, boostReach,
+  LISTING_PLANS, LISTING_PLAN_MAP, BOOST_OPTIONS, planBenefits, boostReach, planPrice, boostPrice,
 } from '../../data/plans.js';
 
 const PLAN_ICON = { premium: Sparkles, gold: Crown, mahala: Check };
@@ -57,7 +57,7 @@ export function BoostSheet({ open, onClose, listing }) {
             onClose();
           }}
         >
-          <Rocket size={18} /> Boost for {kwacha(opt.price)}
+          <Rocket size={18} /> Boost for {kwacha(boostPrice(opt, listing?.category))}
         </Button>
       }
     >
@@ -86,7 +86,7 @@ export function BoostSheet({ open, onClose, listing }) {
                 </div>
                 <p className="text-xs text-muted">{b.blurb}</p>
               </div>
-              <span className="text-base font-extrabold text-ink">{kwacha(b.price)}</span>
+              <span className="text-base font-extrabold text-ink">{kwacha(boostPrice(b, listing?.category))}</span>
             </button>
           );
         })}
@@ -125,7 +125,7 @@ export function UpgradeSheet({ open, onClose, listing }) {
               onClose();
             }}
           >
-            Upgrade to {plan.name} · {kwacha(plan.price)}
+            Upgrade to {plan.name} · {kwacha(planPrice(plan, category))}
           </Button>
         )
       }
@@ -145,7 +145,7 @@ export function UpgradeSheet({ open, onClose, listing }) {
                   <p className="font-extrabold text-ink">{p.name} <span className="text-sm font-medium text-muted">· {p.subtitle}</span></p>
                   <p className="text-xs text-muted">{p.positioning}</p>
                 </div>
-                <span className="text-base font-extrabold text-ink">{kwacha(p.price)}</span>
+                <span className="text-base font-extrabold text-ink">{kwacha(planPrice(p, category))}</span>
               </div>
               {active && (
                 <div className="mt-3 border-t border-hairline pt-3">

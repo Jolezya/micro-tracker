@@ -1,91 +1,114 @@
-// Subscription tiers. Prices in Zambian Kwacha (ZMW) per month.
+// ============================================================
+// Seller subscriptions — for people who sell in VOLUME.
+//
+// Research basis (Nov 2026): Kaira's competition in Zambia is free —
+// Facebook Marketplace, WhatsApp groups, Jumia Deals, B-ne, BuySellZambia.
+// Jiji does not operate here. So the FREE tier must be a complete selling
+// experience, and money comes from (a) per-listing visibility and (b) pros
+// who list in volume — the OLX/Avito pattern, where professional sellers
+// carry most of the revenue.
+//
+// Price anchors: median Zambian income ≈ K2,300/month; a Premium listing
+// should cost about one 1GB data bundle. Mobile-money fees run 1–4% (+~K1 on
+// aggregators), so nothing is priced under K15. Prices include 16% VAT.
+// ============================================================
+export const VAT_RATE = 0.16;
+export const PRICES_INCLUDE_VAT = true;
+export const PRICING_NOTE = 'Prices in Kwacha (ZMW), including 16% VAT. Pay with MTN MoMo, Airtel Money or Zamtel Kwacha.';
+
 export const PLANS = [
   {
     id: 'free',
     name: 'Free',
-    tagline: 'Everything you need to get started',
+    tagline: 'Everything an individual seller needs',
     price: 0,
     badge: null,
     accent: '#64748b',
-    limits: { listings: 5 },
+    limits: { listings: 10 },
     features: [
-      { text: 'Up to 5 active listings', included: true },
-      { text: 'Basic search visibility', included: true },
-      { text: 'Standard support', included: true },
-      { text: 'Basic listing analytics', included: true },
-      { text: 'Ads displayed', included: true, note: true },
-      { text: 'Higher search ranking', included: false },
-      { text: 'Featured listings', included: false },
-      { text: 'Premium seller badge', included: false },
+      { text: 'Up to 10 active listings', included: true },
+      { text: 'Full Mahala selling experience', included: true },
+      { text: 'Buyer chat & offers', included: true },
+      { text: 'Pay-as-you-go Premium, Gold & Boost', included: true },
+      { text: 'Basic listing stats', included: true },
+      { text: 'Premium placement included', included: false },
+      { text: 'Seller analytics', included: false },
+      { text: 'Business profile', included: false },
     ],
   },
   {
-    id: 'premium',
-    name: 'KA Premium',
-    tagline: 'For active sellers who want to be seen',
-    price: 99,
-    badge: 'Premium',
+    id: 'plus',
+    name: 'Plus',
+    tagline: 'For shops & side-hustles that list every week',
+    price: 150,
+    badge: 'Plus',
     accent: '#0f6c54',
-    limits: { listings: 50 },
+    limits: { listings: 25 },
     popular: true,
+    // 25 everyday listings at Premium pay-as-you-go would be K750 — Plus is
+    // a fifth of that, which is the point: it converts anyone listing more
+    // than five items a month.
     features: [
-      { text: 'Everything in Free', included: true },
-      { text: 'Up to 50 active listings', included: true },
-      { text: 'Higher search ranking', included: true },
-      { text: 'Advanced analytics', included: true },
-      { text: 'Priority customer support', included: true },
-      { text: 'Premium seller badge', included: true },
-      { text: 'Featured listings', included: true },
-      { text: 'Reduced ads', included: true },
+      { text: 'Up to 25 active listings', included: true },
+      { text: 'Premium placement on every everyday listing', included: true },
+      { text: 'Half-price Premium on vehicles, property & business', included: true },
+      { text: 'Two 3-day Boosts a month included', included: true },
+      { text: 'Plus badge on your profile & listings', included: true },
+      { text: 'Seller analytics (views, saves, enquiries)', included: true },
+      { text: 'Priority support', included: true },
+      { text: 'Business profile & team seats', included: false },
     ],
   },
   {
-    id: 'gold',
-    name: 'KA Gold',
-    tagline: 'Maximum exposure and pro seller tools',
-    price: 249,
-    badge: 'Gold',
+    id: 'pro',
+    name: 'Pro',
+    tagline: 'For car dealers, estate agents & recruiters',
+    price: 950,
+    badge: 'Pro seller',
     accent: '#b08d4a',
-    limits: { listings: Infinity },
+    limits: { listings: 40 },
+    // 40 big-ticket listings at Premium pay-as-you-go ≈ K3,200 per 45 days
+    // (≈ K2,100/month). Pro at K950 is a 55% saving: ~K24 per car per month.
+    // Gumtree SA charges property agents R700–R2,000/month for the same job.
     features: [
-      { text: 'Everything in Premium', included: true },
-      { text: 'Unlimited listings', included: true },
-      { text: 'Top placement in results', included: true },
-      { text: 'Verified Gold badge', included: true },
-      { text: 'AI pricing suggestions', included: true },
-      { text: 'Listing performance analytics', included: true },
-      { text: 'Profile customization & themes', included: true },
-      { text: 'Advanced seller tools', included: true },
+      { text: 'Up to 40 active listings, any category', included: true },
+      { text: 'Premium placement on every listing, big-ticket included', included: true },
+      { text: '5 rotating Gold slots (top placement + homepage)', included: true },
+      { text: 'Six 3-day Boosts a month included', included: true },
+      { text: 'Business profile, logo & 3 staff seats', included: true },
+      { text: 'Lead inbox & advanced analytics', included: true },
+      { text: 'Bulk upload', included: true },
+      { text: 'Dedicated account manager', included: false },
     ],
   },
   {
     id: 'enterprise',
-    name: 'Enterprise',
-    tagline: 'For dealerships, agencies & retailers',
+    name: 'Corporate',
+    tagline: 'For dealerships, developers & retailers at scale',
     price: null,
     priceLabel: "Let's talk",
     badge: 'Business',
     accent: '#4f46e5',
     limits: { listings: Infinity },
     features: [
-      { text: 'Unlimited users & listings', included: true },
-      { text: 'Company page & branding', included: true },
-      { text: 'Employee & inventory management', included: true },
-      { text: 'Analytics & lead management', included: true },
-      { text: 'Bulk uploads & API access', included: true },
-      { text: 'Priority support', included: true },
-      { text: 'Dedicated account manager', included: true },
+      { text: 'Unlimited listings, users & branches', included: true },
+      { text: 'Gold placement across the marketplace', included: true },
+      { text: 'API & inventory-feed integration', included: true },
+      { text: 'Homepage & category sponsorship', included: true },
+      { text: 'Custom analytics & lead routing', included: true },
+      { text: 'Invoicing & VAT receipts', included: true },
+      { text: 'Dedicated account manager & SLA', included: true },
     ],
   },
 ];
 
 export const PLAN_MAP = Object.fromEntries(PLANS.map((p) => [p.id, p]));
 
-// Badge shown on a seller depending on their plan
+// Badge shown on a seller depending on their subscription
 export const PLAN_BADGE = {
   free: null,
-  premium: { label: 'Premium', color: '#0f6c54' },
-  gold: { label: 'Gold', color: '#b08d4a' },
+  plus: { label: 'Plus', color: '#0f6c54' },
+  pro: { label: 'Pro seller', color: '#b08d4a' },
   enterprise: { label: 'Business', color: '#4f46e5' },
 };
 
@@ -104,6 +127,25 @@ export const PLAN_BADGE = {
 // ============================================================
 
 export const SELL_PRINCIPLE = 'Everyone can sell. Paying gives you more visibility — not basic access.';
+
+// Two price bands. A K80 promotion on a K370,000 Hilux is 0.02% of the sale;
+// the same K80 on a K1,500 phone is 5%. Big-ticket categories have fewer,
+// higher-value buyers and sellers who are usually professionals — every
+// classifieds business from Jiji to OLX prices them separately.
+export const BIG_TICKET = new Set(['vehicles', 'motorcycles', 'boats', 'property', 'business']);
+export const bandFor = (categoryId) => (BIG_TICKET.has(categoryId) ? 'bigTicket' : 'everyday');
+export const BAND_LABEL = { everyday: 'Everyday items', bigTicket: 'Vehicles, property & business' };
+
+// The price of a listing plan for a category. `price` on the plan is the
+// everyday figure so existing callers keep working; big-ticket is explicit.
+export function planPrice(plan, categoryId) {
+  if (!plan) return 0;
+  return bandFor(categoryId) === 'bigTicket' ? (plan.bigTicketPrice ?? plan.price) : plan.price;
+}
+export function boostPrice(boost, categoryId) {
+  if (!boost) return 0;
+  return bandFor(categoryId) === 'bigTicket' ? (boost.bigTicketPrice ?? boost.price) : boost.price;
+}
 
 // The three individual selling plans (Corporate is separate, below).
 export const LISTING_PLANS = [
@@ -131,7 +173,9 @@ export const LISTING_PLANS = [
     subtitle: 'Sell faster',
     positioning: 'Get more visibility and sell faster.',
     heroBenefit: 'Up to 3× more views',
-    price: 35,
+    // ≈ one 1GB data bundle. 2% of a K1,500 phone, 0.02% of a used Hilux.
+    price: 30,
+    bigTicketPrice: 80,
     durationDays: 45,
     photoLimit: 15,
     visibility: 'Boosted — up to 3× more views',
@@ -148,7 +192,8 @@ export const LISTING_PLANS = [
     subtitle: 'Maximum exposure',
     positioning: 'Put your listing in front of more buyers.',
     heroBenefit: 'Top placement + homepage',
-    price: 80,
+    price: 75,
+    bigTicketPrice: 200,
     durationDays: 60,
     photoLimit: 25,
     visibility: 'Top placement + homepage',
@@ -189,10 +234,13 @@ export const CORPORATE = {
 export const LISTING_PLAN_MAP = Object.fromEntries([...LISTING_PLANS, CORPORATE].map((p) => [p.id, p]));
 
 // ---- Boost: temporary extra exposure, independent of the plan ----
+// K15 floor: below that, mobile-money fees (1–4% + ~K1) eat the margin.
+// The 3-day boost costs the same as a Premium listing on purpose — one clean
+// mental model: "K30 buys 3 days at the very top, or 45 days higher up."
 export const BOOST_OPTIONS = [
-  { id: 'b24', label: '24 hours', days: 1, price: 15, blurb: 'A quick spike' },
-  { id: 'b3', label: '3 days', days: 3, price: 30, blurb: 'Most popular', popular: true },
-  { id: 'b7', label: '7 days', days: 7, price: 60, blurb: 'Best value' },
+  { id: 'b24', label: '24 hours', days: 1, price: 15, bigTicketPrice: 30, blurb: 'A quick spike' },
+  { id: 'b3', label: '3 days', days: 3, price: 30, bigTicketPrice: 60, blurb: 'Most popular', popular: true },
+  { id: 'b7', label: '7 days', days: 7, price: 45, bigTicketPrice: 100, blurb: 'Best value' },
 ];
 export const BOOST_MAP = Object.fromEntries(BOOST_OPTIONS.map((b) => [b.id, b]));
 

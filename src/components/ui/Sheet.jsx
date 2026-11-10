@@ -16,10 +16,18 @@ function useLockBody(open) {
 // Bottom sheet — draggable to dismiss on touch.
 export function Sheet({ open, onClose, title, children, footer, maxWidth = 'max-w-lg' }) {
   useLockBody(open);
+  // Escape closes the sheet. Backdrop tap and drag-down already did; a
+  // keyboard user had no way out at all.
+  useEffect(() => {
+    if (!open) return undefined;
+    const onKey = (e) => { if (e.key === 'Escape') onClose?.(); };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [open, onClose]);
   return (
     <AnimatePresence>
       {open && (
-        <div className="fixed inset-0 z-[90] flex items-end justify-center sm:items-center">
+        <div className="fixed inset-0 z-[90] flex items-end justify-center sm:items-center" role="dialog" aria-modal="true" aria-label={typeof title === 'string' ? title : undefined}>
           <motion.div
             className="absolute inset-0 bg-black/40 backdrop-blur-sm"
             initial={{ opacity: 0 }}
@@ -46,7 +54,7 @@ export function Sheet({ open, onClose, title, children, footer, maxWidth = 'max-
                 {title && (
                   <div className="mb-2 flex items-center justify-between">
                     <h2 className="text-lg font-bold text-ink">{title}</h2>
-                    <button onClick={onClose} className="press grid h-9 w-9 place-items-center rounded-full bg-ink/5 text-muted">
+                    <button onClick={onClose} aria-label="Close" className="press grid h-9 w-9 place-items-center rounded-full bg-ink/5 text-muted">
                       <X size={18} />
                     </button>
                   </div>

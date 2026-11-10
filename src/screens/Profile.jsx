@@ -71,14 +71,14 @@ export default function Profile() {
         ) : (
           <>
             {/* Upgrade banner */}
-            {state.plan !== 'gold' && state.plan !== 'enterprise' && (
+            {state.plan !== 'pro' && state.plan !== 'enterprise' && (
               <Link to="/plans" className="press flex items-center gap-3 rounded-3xl bg-gradient-to-br from-accent to-[#0a4d3c] p-4 text-white">
                 <span className="grid h-11 w-11 place-items-center rounded-2xl bg-white/15">
                   <Crown size={22} />
                 </span>
                 <div className="flex-1">
-                  <p className="font-bold">Upgrade to {state.plan === 'free' ? 'KA Premium' : 'KA Gold'}</p>
-                  <p className="text-sm text-white/75">Rank higher, sell faster, unlock analytics</p>
+                  <p className="font-bold">{state.plan === 'free' ? 'Sell in volume? Try Plus' : 'Dealer or agent? Go Pro'}</p>
+                  <p className="text-sm text-white/75">{state.plan === 'free' ? 'Premium on every listing from K150/month' : '40 listings, Gold slots & a business profile'}</p>
                 </div>
                 <ChevronRight size={20} className="text-white/70" />
               </Link>

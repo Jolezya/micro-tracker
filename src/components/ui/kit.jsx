@@ -127,7 +127,7 @@ export function VerifiedBadge({ size = 16 }) {
 export function PlanBadge({ plan, className = '' }) {
   const b = PLAN_BADGE[plan];
   if (!b) return null;
-  const Icon = plan === 'gold' ? Crown : plan === 'enterprise' ? ShieldCheck : BadgeCheck;
+  const Icon = plan === 'pro' ? Crown : plan === 'enterprise' ? ShieldCheck : BadgeCheck;
   return (
     <span
       className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-bold ${className}`}
