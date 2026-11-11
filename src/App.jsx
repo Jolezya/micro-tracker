@@ -1,6 +1,7 @@
 import React, { Suspense, lazy } from 'react';
-import { Routes, Route, Navigate } from 'react-router-dom';
+import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { AppShell } from './components/layout/AppShell.jsx';
+import { ErrorBoundary } from './components/layout/ErrorBoundary.jsx';
 import { Spinner } from './components/ui/kit.jsx';
 
 // Route-level code splitting keeps the initial bundle lean; heavy deps
@@ -18,6 +19,7 @@ const Notifications = lazy(() => import('./screens/Notifications.jsx'));
 const Plans = lazy(() => import('./screens/Plans.jsx'));
 const Admin = lazy(() => import('./screens/Admin.jsx'));
 const Auth = lazy(() => import('./screens/Auth.jsx'));
+const ResetPassword = lazy(() => import('./screens/ResetPassword.jsx'));
 
 function PageLoader() {
   return (
@@ -28,10 +30,13 @@ function PageLoader() {
 }
 
 export default function App() {
+  const location = useLocation();
   return (
+    <ErrorBoundary resetKey={location.pathname}>
     <Suspense fallback={<PageLoader />}>
       <Routes>
         <Route path="/auth" element={<Auth />} />
+        <Route path="/auth/reset" element={<ResetPassword />} />
         <Route element={<AppShell />}>
           <Route index element={<HomeScreen />} />
           <Route path="search" element={<SearchScreen />} />
@@ -51,5 +56,6 @@ export default function App() {
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </Suspense>
+    </ErrorBoundary>
   );
 }

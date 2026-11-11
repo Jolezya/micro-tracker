@@ -12,7 +12,7 @@ import { Container } from '../components/layout/Header.jsx';
 import { Button, Badge, Avatar, Stars, PlanBadge, VerifiedBadge, EmptyState } from '../components/ui/kit.jsx';
 import { Sheet } from '../components/ui/Sheet.jsx';
 import { useToast } from '../components/ui/Toast.jsx';
-import { useAllListings, useStore } from '../lib/store.jsx';
+import { useAllListings, useStore, useMe } from '../lib/store.jsx';
 import { useAuthGate } from '../lib/useAuthGate.jsx';
 import { getUser } from '../data/users.js';
 import { CATEGORY_MAP } from '../data/categories.js';
@@ -30,6 +30,7 @@ export default function ListingDetail() {
   const { toast } = useToast();
   const [report, setReport] = useState(false);
   const requireAuth = useAuthGate();
+  const me = useMe();
 
   const listing = all.find((l) => l.id === id);
 
@@ -54,8 +55,8 @@ export default function ListingDetail() {
 
   const seller = getUser(listing.sellerId) || CURRENT_USER;
   const saved = state.saved.includes(listing.id);
-  const dist = distanceKm(CURRENT_USER, listing.location);
-  const mine = listing.mine || listing.sellerId === CURRENT_USER.id;
+  const dist = distanceKm(me, listing.location);
+  const mine = listing.mine || listing.sellerId === me.id;
 
   const onShare = async () => {
     const url = window.location.href;
@@ -189,9 +190,9 @@ export default function ListingDetail() {
             </div>
             <div className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-muted">
               <Stars rating={seller.rating} size={12} />
-              <span>· {seller.reviews} deals</span>
-              <span>· Member since {memberSince(seller.memberSince).split(' ')[1]}</span>
-              <span>· Replies {seller.responseTime}</span>
+              <span>· {seller.reviews || 0} deals</span>
+              <span>· Member since {memberSince(seller.memberSince || String(seller.createdAt || '').slice(0, 7) || new Date().toISOString().slice(0, 7)).split(' ')[1]}</span>
+              {seller.responseTime && <span>· Replies {seller.responseTime}</span>}
             </div>
             {/* verification chips — subtle trust signals */}
             <div className="mt-1.5 flex flex-wrap gap-1.5">
@@ -291,6 +292,8 @@ export default function ListingDetail() {
               key={r}
               onClick={() => {
                 setReport(false);
+                if (!requireAuth('report')) return;
+                dispatch({ type: 'REPORT_LISTING', id: listing.id, reason: r });
                 toast('Thanks — our moderation team will review this');
               }}
               className="press flex w-full items-center justify-between rounded-xl px-4 py-3.5 text-left text-[15px] font-medium text-ink hover:bg-elevated"

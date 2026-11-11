@@ -18,7 +18,9 @@ import { PlanBenefitList } from '../components/plan/PlanUI.jsx';
 import { OptionChips } from '../components/filters/OptionChips.jsx';
 import { ListingField, sanitizeNumber, clampToField } from '../components/listing/ListingField.jsx';
 import { TOWNS_BY_PROVINCE, locationOf } from '../data/locations.js';
-import { useStore } from '../lib/store.jsx';
+import { useStore, useMe } from '../lib/store.jsx';
+import { isConfigured } from '../lib/supabase.js';
+import { uploadPhotos } from '../lib/backend.js';
 import { useAuthGate } from '../lib/useAuthGate.jsx';
 import { PhoneVerifySheet } from '../components/auth/PhoneVerifySheet.jsx';
 import { placeholderDataUri } from '../lib/media.js';
@@ -44,6 +46,9 @@ export default function Sell() {
   const { editId } = useParams();
   const requireAuth = useAuthGate();
   const [verifyPhone, setVerifyPhone] = useState(false);
+  const [publishing, setPublishing] = useState(false);
+  const me = useMe();
+  const homeTown = String(me.location || CURRENT_USER.location).split(',')[0];
 
   // The same route hydrates two cases: editing a published listing the user
   // owns (saving updates it in place) and resuming a saved draft (saving
@@ -67,7 +72,7 @@ export default function Sell() {
   // Only reuse the URL id when it resolves to a listing the user owns —
   // otherwise /sell/anything would mint a new listing under that id.
   const listingId = useRef(source ? source.id : `l_new_${Date.now().toString(36)}`);
-  const [form, setForm] = useState(() => (source ? formFromListing(source, CURRENT_USER.location.split(',')[0]) : {
+  const [form, setForm] = useState(() => (source ? formFromListing(source, homeTown) : {
     category: null,
     listingPlan: 'mahala',
     photos: [],
@@ -77,7 +82,7 @@ export default function Sell() {
     price: '',
     negotiable: true,
     onRequest: false,
-    location: CURRENT_USER.location.split(',')[0],
+    location: homeTown,
     phone: '',
     delivery: ['Pickup'],
   }));
@@ -214,15 +219,30 @@ export default function Sell() {
     doPublish();
   };
 
-  const doPublish = () => {
-    const listing = buildListing();
+  const doPublish = async () => {
+    if (publishing) return;
+    setPublishing(true);
+    let listing = buildListing();
+    try {
+      // On a shared backend the photos leave the device first: data URLs
+      // become storage URLs, so the listing row is small and the images are
+      // served from a CDN. Already-uploaded URLs pass straight through.
+      if (isConfigured && me?.id) {
+        const photos = await uploadPhotos(me.id, listing.id, listing.photos);
+        listing = { ...listing, photos, photoCount: photos.length };
+      }
+    } catch (e) {
+      toast(`Photos couldn't be uploaded (${e?.message || 'network'}) — publishing with local copies`, { type: 'info' });
+    } finally {
+      setPublishing(false);
+    }
     if (isEdit) {
       dispatch({ type: 'UPDATE_LISTING', id: editing.id, patch: listing });
       toast('Changes saved');
       navigate(`/listing/${editing.id}`);
       return;
     }
-    dispatch({ type: 'PUBLISH', listing });
+    dispatch({ type: 'PUBLISH', listing, sellerId: me?.id });
     dispatch({ type: 'ADD_NOTIFICATION', notification: { type: 'system', title: 'Listing published', body: `${listing.title} is now live on Kaira` } });
     toast(planPrice(plan, form.category) ? `Published on ${plan.name} 🎉` : 'Published! Your listing is live 🎉');
     navigate(`/listing/${listing.id}`);
@@ -315,7 +335,8 @@ export default function Sell() {
               </div>
             )}
             {step === 4 && (
-              <Button full size="lg" onClick={publish}>
+              <Button full size="lg" onClick={publish} disabled={publishing}>
+                {publishing && <Spinner size={18} />}
                 {isEdit ? <><Check size={18} /> Save changes</> : <><Tag size={18} /> Publish Listing</>}
               </Button>
             )}

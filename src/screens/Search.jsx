@@ -16,7 +16,7 @@ import { CATEGORIES, CATEGORY_MAP } from '../data/categories.js';
 import { CURRENT_USER } from '../data/users.js';
 import { schemaFor, quickFilters, hydrateSchema, resolveOptions } from '../data/filterSchema.js';
 import { runNaturalSearch } from '../lib/nlSearch.js';
-import { useAllListings, useStore } from '../lib/store.jsx';
+import { useAllListings, useStore, useMe } from '../lib/store.jsx';
 import {
   matchesText, filterBySchema, sortListings, SORTS,
   countActiveSchema, activeFilterList, isFilterActive, formatFilterValue, getField,
@@ -27,11 +27,11 @@ const VIEW_OPTIONS = [
   { value: 'list', label: 'List', icon: <Rows3 size={15} /> },
   { value: 'map', label: 'Map', icon: <Map size={15} /> },
 ];
-const ORIGIN = CURRENT_USER;
 const EMPTY = {}; // stable reference for "no filters"
 
 export default function Search() {
   const { categoryId } = useParams();
+  const ORIGIN = useMe(); // distance + "near me" anchor on the signed-in user's town
   const navigate = useNavigate();
   const [params] = useSearchParams();
   const all = useAllListings();

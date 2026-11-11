@@ -139,11 +139,15 @@ export function PlanBadge({ plan, className = '' }) {
   );
 }
 
+// A seller with no ratings yet (every new account) has rating null — say
+// "New" rather than invent a number.
 export function Stars({ rating = 0, size = 13, showValue = true }) {
+  const n = Number(rating);
+  const unrated = rating == null || !Number.isFinite(n) || n <= 0;
   return (
     <span className="inline-flex items-center gap-1">
-      <Star size={size} className="text-gold" fill="currentColor" style={{ color: 'rgb(var(--gold))' }} />
-      {showValue && <span className="text-sm font-semibold text-ink">{rating.toFixed(1)}</span>}
+      <Star size={size} className="text-gold" fill={unrated ? 'none' : 'currentColor'} style={{ color: 'rgb(var(--gold))' }} />
+      {showValue && <span className="text-sm font-semibold text-ink">{unrated ? 'New' : n.toFixed(1)}</span>}
     </span>
   );
 }

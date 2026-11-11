@@ -848,3 +848,65 @@ describe('pricing model', () => {
     expect(PLANS.map((p) => p.id)).toEqual(['free', 'plus', 'pro', 'enterprise']);
   });
 });
+
+// ---------------------------------------------------------------------------
+// Phase 1 — backend mappers (pure; the network is never touched here)
+// ---------------------------------------------------------------------------
+import {
+  listingToRow, rowToListing, rowToProfile, buildConversation, rowToMessage, isConfigured as backendConfigured,
+} from '../backend.js';
+
+describe('backend mappers', () => {
+  const me = '11111111-1111-1111-1111-111111111111';
+  const other = '22222222-2222-2222-2222-222222222222';
+
+  it('is not configured in tests, so nothing can reach the network', () => {
+    expect(backendConfigured).toBe(false);
+  });
+
+  it('listing → row → listing round-trips every field the app reads', () => {
+    const listing = {
+      id: 'l_abc', title: 'Hilux 2019', category: 'vehicles', subcategory: 'Cars', brand: 'Toyota', condition: 'Good',
+      price: 370000, negotiable: true, priceLabel: null, priceSuffix: null, description: 'Clean',
+      location: { city: 'Lusaka', area: 'Roma', province: 'Lusaka', lat: -15.4, lng: 28.3 },
+      photos: ['https://x/1.jpg'], photoCount: 1, listingPlan: 'premium', contactPhone: '+260977123456',
+      delivery: ['Pickup'], tags: ['Pickup'], attrs: { year: 2019, fuel: 'Diesel' }, premium: true, sponsored: false,
+      boostedUntil: Date.parse('2026-12-01T00:00:00Z'), boostId: 'b3',
+    };
+    const row = listingToRow(listing, me);
+    expect(row.seller_id).toBe(me);
+    expect(row.listing_plan).toBe('premium');
+    expect(row.boosted_until).toBe('2026-12-01T00:00:00.000Z');
+    expect(row).not.toHaveProperty('views'); // server-owned
+    const back = rowToListing({ ...row, views: 7, saves: 2, status: 'active', posted_at: '2026-11-10T10:00:00Z' });
+    expect(back).toMatchObject({ ...listing, sellerId: me, views: 7, saves: 2, status: 'active', postedAt: '2026-11-10T10:00:00Z' });
+    expect(back.boostedUntil).toBe(listing.boostedUntil); // epoch ms, as the app compares it
+  });
+
+  it('the seller id comes from the session, never from the listing object', () => {
+    const row = listingToRow({ id: 'l_x', title: 't', category: 'pets', sellerId: other }, me);
+    expect(row.seller_id).toBe(me);
+  });
+
+  it('profiles default safely and never claim admin from the client', () => {
+    const p = rowToProfile(null, { id: me, email: 'a@b.zm', user_metadata: { name: 'Thandiwe' } });
+    expect(p).toMatchObject({ id: me, name: 'Thandiwe', role: 'member', plan: 'free', phoneVerified: false });
+    expect(rowToProfile({ id: me, role: 'admin', name: 'A', created_at: '2026-01-05T00:00:00Z' }).memberSince).toBe('2026-01');
+  });
+
+  it('messages render relative to the viewer and unread counts only the other side', () => {
+    const conv = { id: 'c_1', listing_id: 'l_abc', buyer_id: other, seller_id: me, updated_at: 'x' };
+    const rows = [
+      { id: 'm1', sender_id: other, body: 'Still available?', kind: 'text', created_at: '1', read_at: null },
+      { id: 'm2', sender_id: me, body: 'Yes', kind: 'text', created_at: '2', read_at: null },
+      { id: 'm3', sender_id: other, body: 'K350k?', kind: 'offer', created_at: '3', read_at: null },
+      { id: 'm4', sender_id: other, body: 'read one', kind: 'text', created_at: '4', read_at: '5' },
+    ];
+    const c = buildConversation(conv, rows, me);
+    expect(c.otherId).toBe(other);                 // I'm the seller here
+    expect(c.messages.map((m) => m.from)).toEqual(['them', 'me', 'them', 'them']);
+    expect(c.unread).toBe(2);                      // m1 + m3; m2 is mine, m4 is read
+    expect(rowToMessage(rows[2], me).type).toBe('offer');
+    expect(buildConversation(conv, rows, other).otherId).toBe(me); // same thread, buyer's view
+  });
+});

@@ -12,7 +12,7 @@ import { runNaturalSearch } from '../lib/nlSearch.js';
 import { CATEGORIES } from '../data/categories.js';
 import { CURRENT_USER } from '../data/users.js';
 import { distanceKm } from '../lib/format.js';
-import { useAllListings, useStore } from '../lib/store.jsx';
+import { useAllListings, useStore, useMe } from '../lib/store.jsx';
 import { usePullToRefresh } from '../lib/usePullToRefresh.jsx';
 
 function greeting() {
@@ -145,6 +145,7 @@ export default function Home() {
   const { toast } = useToast();
   const { bind, indicator } = usePullToRefresh();
   const [q, setQ] = useState('');
+  const me = useMe();
 
   const submitSearch = () => {
     const text = q.trim();
@@ -162,11 +163,11 @@ export default function Home() {
   );
   const nearby = useMemo(() => {
     return [...all]
-      .map((l) => ({ l, d: distanceKm(CURRENT_USER, l.location) ?? 9999 }))
+      .map((l) => ({ l, d: distanceKm(me, l.location) ?? 9999 }))
       .sort((a, b) => a.d - b.d)
       .slice(0, 10)
       .map((x) => x.l);
-  }, [all]);
+  }, [all, me]);
   const recent = useMemo(
     () => state.recent.map((id) => all.find((l) => l.id === id)).filter(Boolean),
     [state.recent, all]
@@ -279,7 +280,7 @@ export default function Home() {
           <RailHeader
             icon={<MapPin size={19} className="text-accent" />}
             title="Nearby"
-            note={`Close to ${CURRENT_USER.location.split(',')[0]}`}
+            note={`Close to ${String(me.location || 'you').split(',')[0]}`}
             action="See all"
           />
           <Rail>

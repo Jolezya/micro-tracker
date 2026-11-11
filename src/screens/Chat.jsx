@@ -9,6 +9,7 @@ import { Avatar, PlanBadge, Button } from '../components/ui/kit.jsx';
 import { Sheet } from '../components/ui/Sheet.jsx';
 import { useToast } from '../components/ui/Toast.jsx';
 import { useAllListings, useStore } from '../lib/store.jsx';
+import { isConfigured } from '../lib/supabase.js';
 import { getUser } from '../data/users.js';
 import { ListingImage } from '../components/ListingImage.jsx';
 import { formatPrice, kwacha } from '../lib/format.js';
@@ -50,7 +51,9 @@ export default function Chat() {
     return c;
   }, [state.conversations, convId, location.state]);
 
-  const seller = conv ? getUser(conv.sellerId) : null;
+  // `otherId` is set on live threads (I may be the seller); older local
+  // threads only know the seller.
+  const seller = conv ? getUser(conv.otherId || conv.sellerId) : null;
   const listing = conv ? all.find((l) => l.id === conv.listingId) : null;
 
   // Mark read + scroll on open / new messages
@@ -87,7 +90,8 @@ export default function Chat() {
     if (!body?.trim() && msgType === 'text') return;
     dispatch({ type: 'SEND_MESSAGE', convId: conv.id, text: body, msgType });
     setText('');
-    simulateReply();
+    // A real seller answers on a real backend. The bot is demo-only.
+    if (!isConfigured) simulateReply();
   };
 
   return (

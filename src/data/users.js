@@ -153,7 +153,17 @@ export const CURRENT_USER = {
   bio: 'New to Kaira.',
 };
 
+// Live profiles from the backend (and the signed-in local account) take
+// precedence over the seeded demo users. The store registers them as they
+// arrive, so every screen that calls getUser() sees real people without
+// changing a line.
+const LIVE = new Map();
+export function registerProfiles(list) {
+  for (const p of list || []) if (p?.id) LIVE.set(p.id, { ...(LIVE.get(p.id) || {}), ...p });
+}
 export function getUser(id) {
+  if (!id) return undefined;
+  if (LIVE.has(id)) return LIVE.get(id);
   if (id === CURRENT_USER.id) return CURRENT_USER;
   return USER_MAP[id];
 }

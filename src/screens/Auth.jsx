@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Mail, Apple, ArrowRight, ArrowLeft, Eye, EyeOff, ShieldCheck, Zap, Heart, AlertCircle, MapPin } from 'lucide-react';
@@ -6,9 +6,12 @@ import { Logo } from '../components/layout/Logo.jsx';
 import { Button, Spinner } from '../components/ui/kit.jsx';
 import { useToast } from '../components/ui/Toast.jsx';
 import { useStore } from '../lib/store.jsx';
+import { isConfigured } from '../lib/supabase.js';
+import * as api from '../lib/backend.js';
+import { loadUser } from '../lib/sync.jsx';
 import { TOWN_NAMES } from '../data/locations.js';
 import {
-  signUp, signIn, makeAccount, validateName, passwordStrength, gateReason,
+  signUp, signIn, makeAccount, validateName, validateEmail, validatePassword, passwordStrength, gateReason,
 } from '../lib/auth.js';
 
 function GoogleIcon(props) {
@@ -63,7 +66,10 @@ export default function Auth() {
   };
   const reason = location.state?.reason ? gateReason(location.state.reason) : null;
 
-  const [mode, setMode] = useState(location.state?.mode === 'signin' ? 'signin' : 'signup');
+  const [mode, setMode] = useState(location.state?.mode === 'signin' ? 'signin' : 'signup'); // signup | signin | forgot | sent
+  const params = new URLSearchParams(location.search);
+  const oauthReturn = params.get('returnTo');
+  const [sent, setSent] = useState(null); // 'verify' | 'reset' — which email we told them to check
   const [step, setStep] = useState('credentials'); // credentials | profile
   const [form, setForm] = useState({ name: '', email: '', password: '', town: '' });
   const [errors, setErrors] = useState({});
@@ -72,6 +78,23 @@ export default function Auth() {
   const [draftUser, setDraftUser] = useState(null);
 
   const set = (patch) => { setForm((f) => ({ ...f, ...patch })); setErrors({}); };
+
+  // Email-verification link lands here with ?verified=1.
+  useEffect(() => {
+    if (params.get('verified') === '1') { toast('Email verified — sign in to continue'); setMode('signin'); }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Real backend: the session arrives via the auth listener (OAuth redirect,
+  // or after submit). Leave as soon as we're hydrated — unless the account
+  // has no town yet, in which case collect it first.
+  useEffect(() => {
+    if (!isConfigured || state.auth.status !== 'authed' || step === 'profile') return;
+    const u = state.auth.user;
+    if (!u?.location) { setDraftUser(u); setStep('profile'); return; }
+    navigate(oauthReturn || returnTo, { replace: true });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [state.auth.status, state.auth.user?.id]);
   const strength = useMemo(() => passwordStrength(form.password), [form.password]);
 
   const done = (user, message) => {
@@ -83,6 +106,7 @@ export default function Auth() {
   // --- email + password ---
   const submitCredentials = (e) => {
     e?.preventDefault();
+    if (isConfigured) { submitRemote(); return; }
     setLoading('email');
     // Kept async-shaped so swapping in a real API later changes only this block.
     setTimeout(() => {
@@ -104,7 +128,14 @@ export default function Auth() {
   };
 
   // --- one-tap providers (no per-signup cost) ---
-  const withProvider = (provider) => {
+  const withProvider = async (provider) => {
+    if (isConfigured) {
+      setLoading(provider);
+      await api.ensureClient();
+      const r = await api.signInWithGoogle(returnTo); // redirects away on success
+      if (r.error) { setLoading(null); setErrors({ email: r.error }); }
+      return;
+    }
     setLoading(provider);
     setTimeout(() => {
       const email = `you@${provider === 'google' ? 'gmail.com' : 'icloud.com'}`;
@@ -124,6 +155,12 @@ export default function Auth() {
     if (nameErr) { setErrors({ name: nameErr }); return; }
     if (!form.town) { setErrors({ town: 'Choose your town so buyers nearby can find you' }); return; }
     const name = (form.name || draftUser.name).trim();
+    if (isConfigured) {
+      dispatch({ type: 'UPDATE_PROFILE', patch: { name, location: form.town } });
+      toast('Welcome to Kaira 🎉');
+      navigate(oauthReturn || returnTo, { replace: true });
+      return;
+    }
     const user = {
       ...draftUser,
       name,
@@ -132,6 +169,41 @@ export default function Auth() {
       isNew: true,
     };
     done(user, 'Welcome to Kaira 🎉');
+  };
+
+  // ---- real backend paths ----
+  const submitRemote = async () => {
+    setLoading('email');
+    await api.ensureClient();
+    const emailErr = validateEmail(form.email);
+    if (emailErr) { setLoading(null); setErrors({ email: emailErr }); return; }
+    if (mode === 'forgot') {
+      const r = await api.resetPassword(form.email);
+      setLoading(null);
+      if (r.error) { setErrors({ email: r.error }); return; }
+      setSent('reset'); setMode('sent');
+      return;
+    }
+    if (mode === 'signin') {
+      const r = await api.signInEmail({ email: form.email, password: form.password });
+      if (r.error) { setLoading(null); setErrors({ password: /confirm/i.test(r.error) ? 'Please confirm your email first — check your inbox' : 'Email or password is incorrect' }); return; }
+      await loadUser(r.user, dispatch); // the auth effect above navigates
+      setLoading(null);
+      toast(`Welcome back 👋`);
+      return;
+    }
+    // sign up
+    const nameErr = validateName(form.name);
+    if (nameErr) { setLoading(null); setErrors({ name: nameErr }); return; }
+    const pwErr = validatePassword(form.password);
+    if (pwErr) { setLoading(null); setErrors({ password: pwErr }); return; }
+    const r = await api.signUpEmail({ email: form.email, password: form.password, name: form.name.trim() });
+    setLoading(null);
+    if (r.error) { setErrors({ email: /already/i.test(r.error) ? 'An account with this email already exists. Sign in instead.' : r.error }); return; }
+    if (r.needsEmailConfirm) { setSent('verify'); setMode('sent'); return; }
+    await loadUser(r.user, dispatch);
+    setDraftUser({ name: form.name.trim() });
+    setStep('profile');
   };
 
   const busy = !!loading;
@@ -158,7 +230,7 @@ export default function Auth() {
               </h1>
               {/* When a gate sent them here, lead with the reason. */}
               <p className="mt-2 text-muted">
-                {reason || 'Free to join. Browse, buy and sell across Zambia.'}
+                {mode === 'forgot' ? 'Enter your email and we’ll send you a link to set a new password.' : (reason || 'Free to join. Browse, buy and sell across Zambia.')}
               </p>
             </div>
 
@@ -171,13 +243,15 @@ export default function Auth() {
               >
                 {loading === 'google' ? <Spinner size={18} /> : <GoogleIcon />} Continue with Google
               </button>
-              <button
-                onClick={() => withProvider('apple')}
-                disabled={busy}
-                className="press focus-ring flex h-12 w-full items-center justify-center gap-2.5 rounded-2xl border border-hairline bg-surface text-[15px] font-bold text-ink disabled:opacity-60"
-              >
-                {loading === 'apple' ? <Spinner size={18} /> : <Apple size={18} />} Continue with Apple
-              </button>
+              {(!isConfigured || import.meta.env.VITE_AUTH_APPLE === 'true') && (
+                <button
+                  onClick={() => withProvider('apple')}
+                  disabled={busy}
+                  className="press focus-ring flex h-12 w-full items-center justify-center gap-2.5 rounded-2xl border border-hairline bg-surface text-[15px] font-bold text-ink disabled:opacity-60"
+                >
+                  {loading === 'apple' ? <Spinner size={18} /> : <Apple size={18} />} Continue with Apple
+                </button>
+              )}
             </div>
 
             <div className="my-5 flex items-center gap-3">
@@ -186,6 +260,18 @@ export default function Auth() {
               <span className="h-px flex-1 bg-line/15" />
             </div>
 
+            {mode === 'sent' ? (
+              <div className="rounded-3xl border border-hairline bg-surface p-5 text-center">
+                <Mail size={28} className="mx-auto text-accent" />
+                <h2 className="mt-3 text-lg font-extrabold text-ink">Check your email</h2>
+                <p className="mt-1 text-sm text-muted">
+                  {sent === 'reset'
+                    ? <>We sent a link to <span className="font-semibold text-ink">{form.email}</span>. Open it on this phone to choose a new password.</>
+                    : <>We sent a confirmation link to <span className="font-semibold text-ink">{form.email}</span>. Tap it, then come back and sign in.</>}
+                </p>
+                <button onClick={() => { setMode('signin'); setSent(null); }} className="press mt-4 text-sm font-bold text-accent">Back to sign in</button>
+              </div>
+            ) : (
             <form onSubmit={submitCredentials} noValidate className="space-y-3.5">
               {mode === 'signup' && (
                 <Field label="Full name" error={errors.name}>
@@ -209,6 +295,7 @@ export default function Auth() {
                   className={inputCls(errors.email)}
                 />
               </Field>
+              {mode !== 'forgot' && (
               <Field
                 label="Password"
                 error={errors.password}
@@ -233,6 +320,12 @@ export default function Auth() {
                   </button>
                 </div>
               </Field>
+              )}
+              {mode === 'signin' && isConfigured && (
+                <div className="-mt-1 text-right">
+                  <button type="button" onClick={() => { setMode('forgot'); setErrors({}); }} className="press text-xs font-bold text-accent">Forgot password?</button>
+                </div>
+              )}
 
               {mode === 'signup' && form.password && (
                 <div className="flex gap-1" aria-hidden>
@@ -249,9 +342,10 @@ export default function Auth() {
 
               <Button full size="lg" type="submit" disabled={busy}>
                 {loading === 'email' ? <Spinner size={18} /> : <Mail size={18} />}
-                {mode === 'signin' ? 'Sign in' : 'Create account'}
+                {mode === 'signin' ? 'Sign in' : mode === 'forgot' ? 'Email me a reset link' : 'Create account'}
               </Button>
             </form>
+            )}
 
             <p className="mt-5 text-center text-sm text-muted">
               {mode === 'signin' ? 'New to Kaira?' : 'Already have an account?'}{' '}

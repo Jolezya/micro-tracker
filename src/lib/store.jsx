@@ -1,5 +1,6 @@
 import React, {
   createContext,
+  useCallback,
   useContext,
   useEffect,
   useMemo,
@@ -8,8 +9,17 @@ import React, {
   useState,
 } from 'react';
 import { LISTINGS } from '../data/listings.js';
-import { CURRENT_USER } from '../data/users.js';
+import { CURRENT_USER, registerProfiles } from '../data/users.js';
 import { LISTING_PLAN_MAP, BOOST_MAP } from '../data/plans.js';
+import { locationOf } from '../data/locations.js';
+import { isConfigured } from './supabase.js';
+import { assignIds, mirror, useBackendSync } from './sync.jsx';
+
+// Demo listings sit alongside real ones while the marketplace fills up.
+// Switch off before launch: VITE_SHOW_SEED_LISTINGS=false
+const SHOW_SEEDS = (import.meta.env.VITE_SHOW_SEED_LISTINGS ?? 'true') !== 'false';
+// Not persisted: these are re-fetched from the backend on every boot.
+const TRANSIENT_KEYS = ['remoteListings', 'profiles', 'recovery'];
 
 // ============================================================
 // Kaira client store — the app's local "backend".
@@ -122,6 +132,10 @@ const initialState = {
   adoptedValues: [],
   // notification preferences — persisted, not component state
   prefs: { notifications: { messages: true, price: true, searches: true, marketing: false } },
+  // ---- backend-fed (transient) ----
+  remoteListings: [],   // everyone's active listings
+  profiles: {},         // id → profile, for people in my threads / sellers I see
+  recovery: false,      // true while a password-recovery session is active
 };
 
 function load() {
@@ -194,7 +208,53 @@ export function reducer(state, action) {
     }
 
     case 'SIGN_OUT':
+      // On a shared backend, one account's threads and favourites must not
+      // linger on a shared phone for the next person who signs in.
+      if (isConfigured) {
+        return {
+          ...state, auth: { status: 'guest', user: null },
+          saved: [], following: [], conversations: [], notifications: [], myListings: [], drafts: [],
+        };
+      }
       return { ...state, auth: { status: 'guest', user: null } };
+
+    // Everything for a signed-in user, straight from the backend.
+    case 'HYDRATE_USER':
+      return {
+        ...state,
+        auth: { status: 'authed', user: action.user },
+        onboarded: true,
+        plan: action.user?.plan || 'free',
+        saved: action.saved || [],
+        following: action.following || [],
+        conversations: action.conversations || [],
+        notifications: action.notifications || [],
+        myListings: action.myListings || [],
+      };
+    case 'SET_PROFILES': {
+      const profiles = { ...state.profiles };
+      for (const p of action.profiles || []) if (p?.id) profiles[p.id] = p;
+      return { ...state, profiles };
+    }
+    case 'SET_REMOTE_LISTINGS':
+      return { ...state, remoteListings: action.listings || [] };
+    case 'UPSERT_REMOTE_LISTING': {
+      const l = action.listing;
+      const rest = state.remoteListings.filter((x) => x.id !== l.id);
+      return { ...state, remoteListings: [l, ...rest] };
+    }
+    case 'REMOVE_REMOTE_LISTING':
+      return { ...state, remoteListings: state.remoteListings.filter((x) => x.id !== action.id) };
+    case 'SET_CONVERSATIONS':
+      return { ...state, conversations: action.conversations || [] };
+    case 'ADD_CONVERSATION':
+      if (state.conversations.some((c) => c.id === action.conversation.id)) return state;
+      return { ...state, conversations: [action.conversation, ...state.conversations] };
+    case 'SET_RECOVERY':
+      return { ...state, recovery: !!action.value };
+    // Recorded server-side only (see sync.mirror); nothing to show locally.
+    case 'REPORT_LISTING':
+      return state;
 
     case 'SET_PLAN':
       return { ...state, plan: action.plan };
@@ -265,7 +325,7 @@ export function reducer(state, action) {
       const listing = {
         ...action.listing,
         id: action.listing.id?.startsWith('l_') ? action.listing.id : uid('l'),
-        sellerId: CURRENT_USER.id,
+        sellerId: action.sellerId || state.auth.user?.id || CURRENT_USER.id,
         postedAt: new Date().toISOString(),
         mine: true,
         views: 0,
@@ -325,9 +385,12 @@ export function reducer(state, action) {
         (c) => c.sellerId === action.sellerId && c.listingId === action.listingId
       );
       if (existing) return state;
+      const buyerId = state.auth.user?.id || CURRENT_USER.id;
       const conv = {
-        id: uid('c'),
+        id: action.id || uid('c'),
         sellerId: action.sellerId,
+        buyerId,
+        otherId: action.sellerId,
         listingId: action.listingId,
         unread: 0,
         typing: false,
@@ -345,7 +408,7 @@ export function reducer(state, action) {
                 ...c,
                 messages: [
                   ...c.messages,
-                  { id: uid('m'), from: 'me', text: action.text, type: action.msgType || 'text', at: new Date().toISOString() },
+                  { id: action.id || uid('m'), from: 'me', senderId: state.auth.user?.id || CURRENT_USER.id, text: action.text, type: action.msgType || 'text', at: new Date().toISOString() },
                 ],
               }
             : c
@@ -370,10 +433,12 @@ export function reducer(state, action) {
                 ...c,
                 typing: false,
                 unread: action.markRead ? 0 : c.unread + 1,
-                messages: [
-                  ...c.messages,
-                  { id: uid('m'), from: 'them', text: action.text, type: 'text', at: new Date().toISOString() },
-                ],
+                messages: c.messages.some((m) => m.id === action.message?.id)
+                  ? c.messages
+                  : [
+                      ...c.messages,
+                      action.message || { id: uid('m'), from: 'them', text: action.text, type: 'text', at: new Date().toISOString() },
+                    ],
               }
             : c
         ),
@@ -390,10 +455,12 @@ export function reducer(state, action) {
     case 'ADD_NOTIFICATION':
       return {
         ...state,
-        notifications: [
-          { id: uid('n'), read: false, at: new Date().toISOString(), ...action.notification },
-          ...state.notifications,
-        ],
+        notifications: state.notifications.some((n) => n.id === action.notification?.id)
+          ? state.notifications
+          : [
+              { id: uid('n'), read: false, at: new Date().toISOString(), ...action.notification },
+              ...state.notifications,
+            ],
       };
     case 'READ_ALL_NOTIFICATIONS':
       return { ...state, notifications: state.notifications.map((n) => ({ ...n, read: true })) };
@@ -436,8 +503,31 @@ export function reducer(state, action) {
 const StoreContext = createContext(null);
 
 export function StoreProvider({ children }) {
-  const [state, dispatch] = useReducer(reducer, undefined, load);
+  const [state, rawDispatch] = useReducer(reducer, undefined, load);
   const first = useRef(true);
+  const stateRef = useRef(state);
+  stateRef.current = state;
+  const [syncError, setSyncError] = useState(null);
+
+  // assign ids → apply locally (optimistic) → replay against the backend.
+  // The reducer is pure, so running it once more here to learn the next
+  // state is cheap and keeps `prev`/`next` exact even across rapid dispatches.
+  const dispatch = useCallback((action) => {
+    const a = assignIds(action);
+    const prev = stateRef.current;
+    const next = reducer(prev, a);
+    stateRef.current = next;
+    rawDispatch(a);
+    mirror(a, prev, next, setSyncError);
+  }, []);
+
+  useBackendSync(state, dispatch, setSyncError);
+
+  // Whoever is signed in resolves through getUser() like any other seller —
+  // their own listings and threads need a face in both modes.
+  useEffect(() => {
+    if (state.auth.status === 'authed' && state.auth.user) registerProfiles([state.auth.user]);
+  }, [state.auth]);
   // Not part of `state` on purpose: putting it there would re-run the persist
   // effect, fail again, and loop. It only exists to tell the user.
   const [storageFull, setStorageFull] = useState(false);
@@ -449,7 +539,9 @@ export function StoreProvider({ children }) {
       return;
     }
     try {
-      localStorage.setItem(KEY, JSON.stringify(state));
+      const persisted = { ...state };
+      for (const k of TRANSIENT_KEYS) delete persisted[k];
+      localStorage.setItem(KEY, JSON.stringify(persisted));
       setStorageFull(false);
     } catch {
       // Quota exceeded. Swallowing this silently meant a seller could keep
@@ -468,7 +560,10 @@ export function StoreProvider({ children }) {
     }
   }, [state.theme]);
 
-  const value = useMemo(() => ({ state, dispatch, storageFull }), [state, storageFull]);
+  const value = useMemo(
+    () => ({ state, dispatch, storageFull, syncError, clearSyncError: () => setSyncError(null), backendConfigured: isConfigured }),
+    [state, dispatch, storageFull, syncError]
+  );
   return <StoreContext.Provider value={value}>{children}</StoreContext.Provider>;
 }
 
@@ -481,14 +576,27 @@ export function useStore() {
 // ---- Derived data helpers ----
 export function useAllListings() {
   const { state } = useStore();
-  // user listings first, then seed data (dedup by id)
+  // mine first (they carry `mine: true`), then everyone else's live listings,
+  // then the demo seeds while enabled — dedup by id
   return useMemo(() => {
     const map = new Map();
-    for (const l of [...state.myListings, ...LISTINGS]) {
+    for (const l of [...state.myListings, ...(state.remoteListings || []), ...(SHOW_SEEDS ? LISTINGS : [])]) {
       if (!map.has(l.id)) map.set(l.id, l);
     }
     return [...map.values()];
-  }, [state.myListings]);
+  }, [state.myListings, state.remoteListings]);
+}
+
+// The person using the app, with coordinates for distance and "nearby".
+// A real account stores a town name; the demo user has lat/lng already.
+export function useMe() {
+  const { state } = useStore();
+  return useMemo(() => {
+    const u = state.auth.status === 'authed' && state.auth.user ? state.auth.user : CURRENT_USER;
+    if (u.lat != null && u.lng != null) return u;
+    const loc = locationOf(String(u.location || 'Lusaka').split(',')[0]);
+    return { ...u, lat: loc.lat, lng: loc.lng };
+  }, [state.auth]);
 }
 
 export function useCurrentUser() {

@@ -76,7 +76,7 @@ export default function SellerProfile() {
             <div className="flex items-center justify-center">
               <Stars rating={seller.rating} size={15} />
             </div>
-            <p className="mt-0.5 text-xs text-muted">{seller.reviews} reviews</p>
+            <p className="mt-0.5 text-xs text-muted">{seller.reviews || 0} reviews</p>
           </div>
           <div>
             <p className="text-lg font-extrabold text-ink">{compactNumber(seller.followers)}</p>
@@ -151,16 +151,19 @@ export default function SellerProfile() {
               <EmptyState icon={MapPin} title="No active listings" body="This seller has nothing listed right now." />
             )
           ) : (
+            !(seller.rating > 0) ? (
+              <EmptyState icon={Star} title="No reviews yet" body="Ratings appear after this seller completes their first deals on Kaira." />
+            ) : (
             <div className="space-y-3">
               <div className="flex items-center gap-3 rounded-2xl border border-hairline bg-surface p-4">
-                <p className="text-4xl font-extrabold text-ink">{seller.rating.toFixed(1)}</p>
+                <p className="text-4xl font-extrabold text-ink">{Number(seller.rating).toFixed(1)}</p>
                 <div>
                   <div className="flex">
                     {Array.from({ length: 5 }).map((_, i) => (
                       <Star key={i} size={16} className="text-gold" fill={i < Math.round(seller.rating) ? 'currentColor' : 'none'} style={{ color: 'rgb(var(--gold))' }} />
                     ))}
                   </div>
-                  <p className="mt-0.5 text-sm text-muted">Based on {seller.reviews} reviews</p>
+                  <p className="mt-0.5 text-sm text-muted">Based on {seller.reviews || 0} reviews</p>
                 </div>
               </div>
               {SAMPLE_REVIEWS.map((r, i) => (
@@ -181,6 +184,7 @@ export default function SellerProfile() {
                 </div>
               ))}
             </div>
+            )
           )}
         </div>
       </Container>

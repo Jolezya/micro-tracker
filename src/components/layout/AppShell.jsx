@@ -119,16 +119,26 @@ function BottomNav() {
 // Shown only when a save has actually failed. Before this, a full localStorage
 // meant every change silently evaporated on the next reload.
 function StorageFullBanner() {
-  const { storageFull } = useStore();
-  if (!storageFull) return null;
+  const { storageFull, syncError, clearSyncError } = useStore();
+  if (!storageFull && !syncError) return null;
   return (
     <div role="alert" className="mx-auto max-w-5xl px-4 pt-3">
       <div className="flex items-start gap-3 rounded-2xl border border-danger/30 bg-danger/10 px-4 py-3 text-sm text-ink">
         <AlertTriangle size={18} className="mt-0.5 shrink-0 text-danger" />
-        <div>
-          <p className="font-bold">Kaira can't save your changes — storage on this device is full.</p>
-          <p className="mt-0.5 text-muted">Remove some listing photos or old drafts, then try again. Anything you do until then will be lost when you close the app.</p>
-        </div>
+        {storageFull ? (
+          <div className="flex-1">
+            <p className="font-bold">Kaira can't save your changes — storage on this device is full.</p>
+            <p className="mt-0.5 text-muted">Remove some listing photos or old drafts, then try again. Anything you do until then will be lost when you close the app.</p>
+          </div>
+        ) : (
+          <div className="flex-1">
+            <p className="font-bold">Something didn't reach Kaira's servers.</p>
+            <p className="mt-0.5 text-muted">{syncError}</p>
+          </div>
+        )}
+        {!storageFull && (
+          <button onClick={clearSyncError} aria-label="Dismiss" className="press -mr-1 shrink-0 rounded-full px-2 text-xs font-bold text-muted">Dismiss</button>
+        )}
       </div>
     </div>
   );

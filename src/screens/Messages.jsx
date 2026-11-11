@@ -32,7 +32,7 @@ export default function Messages() {
         ) : (
           <div className="divide-y divide-line/10">
             {convs.map((c) => {
-              const seller = getUser(c.sellerId);
+              const seller = getUser(c.otherId || c.sellerId);
               const listing = all.find((l) => l.id === c.listingId);
               const last = c.messages[c.messages.length - 1];
               return (
